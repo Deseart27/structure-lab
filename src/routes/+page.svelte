@@ -3,7 +3,7 @@
 
 	const versions = [
 		{ id: 'v1', name: 'Version 1 — Current', desc: 'Current FullEnrich app structure (baseline)', entry: 'search' },
-		{ id: 'v2', name: 'Version 2 — Unified', desc: 'Search + Enrich + Prospects + Integrations. Unified lists, consistent actions, no silos.', entry: 'search' },
+		{ id: 'v2', name: 'Version 2 — Unified', desc: 'Search + Enrichment + Lists + Integrations. Unified lists, consistent actions, no silos.', entry: 'search' },
 	];
 </script>
 

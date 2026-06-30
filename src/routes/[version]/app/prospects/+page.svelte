@@ -63,7 +63,7 @@
 	<!-- Header -->
 	<div class="border-grey-200 flex h-14 shrink-0 items-center justify-between border-b px-6">
 		<div class="flex items-center gap-3">
-			<h1 class="text-grey-900 text-base font-semibold">Prospects</h1>
+			<h1 class="text-grey-900 text-base font-semibold">Lists</h1>
 			<span class="text-grey-500 text-sm">{lists.length} lists &middot; {lists.reduce((s, l) => s + l.count, 0).toLocaleString()} contacts</span>
 		</div>
 		<div class="flex items-center gap-2">
@@ -84,7 +84,7 @@
 			{/if}
 			<a href="{base}/app/find" class="btn-primary h-8 gap-1.5 px-3 text-sm">
 				<span class="material-icons-round text-sm text-white">add</span>
-				Add Prospects
+				New List
 			</a>
 		</div>
 	</div>

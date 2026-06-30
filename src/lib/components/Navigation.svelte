@@ -12,8 +12,8 @@
 		version === 'v2'
 			? [
 					{ label: 'Search', href: `${base}/app/search`, match: '/search' },
-					{ label: 'Enrich', href: `${base}/app/enrich`, match: '/enrich' },
-					{ label: 'Prospects', href: `${base}/app/prospects`, match: '/prospects' },
+					{ label: 'Enrichment', href: `${base}/app/enrich`, match: '/enrich' },
+					{ label: 'Lists', href: `${base}/app/prospects`, match: '/prospects' },
 					{ label: 'Integrations', href: `${base}/app/integrations`, match: '/integrations' },
 				]
 			: [

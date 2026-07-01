@@ -18,6 +18,11 @@
 		{ name: 'New Signups June', count: 89, enriched: 0, lastEnriched: 'Never' },
 		{ name: 'Enterprise Accounts', count: 45, enriched: 45, lastEnriched: 'Jun 20, 2025' },
 	];
+
+	const crmJobs = [
+		{ id: 'cj1', list: 'Marketing Qualified Leads', listId: '1', source: 'HubSpot', contacts: 1245, found: 890, status: 'completed' as const, progress: 100, started: '2 days ago' },
+		{ id: 'cj2', list: 'Sales Pipeline Q1', listId: '2', source: 'HubSpot', contacts: 367, found: 254, status: 'running' as const, progress: 69, started: '35 min ago' },
+	];
 </script>
 
 <div class="flex h-full flex-col overflow-auto">
@@ -73,7 +78,7 @@
 			</div>
 
 			<!-- HubSpot Lists -->
-			<div class="mb-20">
+			<div class="mb-8">
 				<div class="mb-4 flex items-center justify-between">
 					<h3 class="text-grey-900 text-base font-semibold">HubSpot Lists</h3>
 					<span class="text-grey-500 text-sm">Last synced: 2 hours ago</span>
@@ -106,6 +111,58 @@
 									<span class="material-icons-round text-base">auto_awesome</span>
 									Enrich
 								</button>
+							</div>
+						</div>
+					{/each}
+				</div>
+			</div>
+
+			<!-- Recent Jobs -->
+			<div class="mb-20">
+				<div class="flex items-center justify-between">
+					<h2 class="text-grey-900 text-lg font-semibold">Recent Jobs</h2>
+					<span class="text-grey-500 text-sm">{crmJobs.filter(j => j.status === 'running').length} running</span>
+				</div>
+				<div class="border-grey-200 mt-4 overflow-hidden rounded-xl border">
+					{#each crmJobs as job, i}
+						<div
+							class="hover:bg-grey-50 flex items-center gap-4 px-5 py-4 transition-colors"
+							class:border-grey-100={i < crmJobs.length - 1}
+							class:border-b={i < crmJobs.length - 1}
+						>
+							<div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg {job.status === 'running' ? 'bg-amber-50' : 'bg-emerald-50'}">
+								<span class="material-icons-round text-lg {job.status === 'running' ? 'text-amber-600' : 'text-emerald-600'}">
+									{job.status === 'running' ? 'sync' : 'check_circle'}
+								</span>
+							</div>
+							<div class="min-w-0 flex-1">
+								<div class="flex items-center gap-2">
+									<p class="text-grey-900 truncate text-sm font-medium">{job.list}</p>
+									<span class="text-grey-400 text-xs">&middot;</span>
+									<span class="text-grey-500 text-xs">{job.source}</span>
+									<span class="text-grey-400 text-xs">&middot;</span>
+									<span class="text-grey-500 text-xs">CRM Enrichment</span>
+								</div>
+								<div class="mt-1.5 flex items-center gap-3">
+									<div class="bg-grey-200 h-1.5 w-32 overflow-hidden rounded-full">
+										<div
+											class="h-full rounded-full transition-all {job.status === 'running' ? 'bg-amber-500' : 'bg-emerald-500'}"
+											style:width="{job.progress}%"
+										></div>
+									</div>
+									<span class="text-grey-500 text-xs">{job.found}/{job.contacts} found</span>
+								</div>
+							</div>
+							<div class="flex shrink-0 items-center gap-3">
+								<span class="text-grey-400 text-xs">{job.started}</span>
+								{#if job.status === 'completed'}
+									<a href="{base}/app/prospects/{job.listId}" class="btn-ghost flex h-7 items-center gap-1 px-2 text-xs text-violet-700">
+										View in Lists
+										<span class="material-icons-round text-sm">arrow_forward</span>
+									</a>
+								{:else}
+									<span class="inline-flex h-6 items-center rounded-full bg-amber-50 px-2.5 text-xs font-medium text-amber-700">{job.progress}%</span>
+								{/if}
 							</div>
 						</div>
 					{/each}

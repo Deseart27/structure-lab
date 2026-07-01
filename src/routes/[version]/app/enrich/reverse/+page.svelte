@@ -4,6 +4,12 @@
 	import { toast } from '$lib/toast.svelte';
 	let base = $derived(`${svelteBase}/${$page.params.version}`);
 	let emailInput = $state('');
+
+	const reverseJobs = [
+		{ id: 'rj1', list: 'Newsletter Reverse Lookup', listId: '6', emails: 67, found: 52, status: 'completed' as const, progress: 100, started: '2 weeks ago' },
+		{ id: 'rj2', list: 'Webinar Attendees', listId: '1', emails: 145, found: 89, status: 'running' as const, progress: 61, started: '20 min ago' },
+		{ id: 'rj3', list: 'Inbound Leads June', listId: '4', emails: 34, found: 28, status: 'completed' as const, progress: 100, started: '5 days ago' },
+	];
 </script>
 
 <div class="flex h-full flex-col overflow-auto">
@@ -65,7 +71,7 @@
 			</div>
 
 			<!-- Destination + Start -->
-			<div class="border-grey-200 mt-6 mb-20 flex items-center justify-between rounded-xl border bg-white p-4 shadow-sm">
+			<div class="border-grey-200 mt-6 flex items-center justify-between rounded-xl border bg-white p-4 shadow-sm">
 				<div class="flex items-center gap-4">
 					<div class="flex items-center gap-2">
 						<span class="material-icons-round text-grey-500 text-base">folder</span>
@@ -80,6 +86,56 @@
 				<button class="btn-primary h-10 px-4 text-sm font-semibold" onclick={() => toast.show('Reverse lookup started')}>
 					Start Lookup
 				</button>
+			</div>
+
+			<!-- Recent Jobs -->
+			<div class="mt-10 mb-20">
+				<div class="flex items-center justify-between">
+					<h2 class="text-grey-900 text-lg font-semibold">Recent Jobs</h2>
+					<span class="text-grey-500 text-sm">{reverseJobs.filter(j => j.status === 'running').length} running</span>
+				</div>
+				<div class="border-grey-200 mt-4 overflow-hidden rounded-xl border">
+					{#each reverseJobs as job, i}
+						<div
+							class="hover:bg-grey-50 flex items-center gap-4 px-5 py-4 transition-colors"
+							class:border-grey-100={i < reverseJobs.length - 1}
+							class:border-b={i < reverseJobs.length - 1}
+						>
+							<div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg {job.status === 'running' ? 'bg-amber-50' : 'bg-emerald-50'}">
+								<span class="material-icons-round text-lg {job.status === 'running' ? 'text-amber-600' : 'text-emerald-600'}">
+									{job.status === 'running' ? 'sync' : 'check_circle'}
+								</span>
+							</div>
+							<div class="min-w-0 flex-1">
+								<div class="flex items-center gap-2">
+									<p class="text-grey-900 truncate text-sm font-medium">{job.list}</p>
+									<span class="text-grey-400 text-xs">&middot;</span>
+									<span class="text-grey-500 text-xs">Reverse Lookup</span>
+								</div>
+								<div class="mt-1.5 flex items-center gap-3">
+									<div class="bg-grey-200 h-1.5 w-32 overflow-hidden rounded-full">
+										<div
+											class="h-full rounded-full transition-all {job.status === 'running' ? 'bg-amber-500' : 'bg-emerald-500'}"
+											style:width="{job.progress}%"
+										></div>
+									</div>
+									<span class="text-grey-500 text-xs">{job.found}/{job.emails} found</span>
+								</div>
+							</div>
+							<div class="flex shrink-0 items-center gap-3">
+								<span class="text-grey-400 text-xs">{job.started}</span>
+								{#if job.status === 'completed'}
+									<a href="{base}/app/prospects/{job.listId}" class="btn-ghost flex h-7 items-center gap-1 px-2 text-xs text-violet-700">
+										View in Lists
+										<span class="material-icons-round text-sm">arrow_forward</span>
+									</a>
+								{:else}
+									<span class="inline-flex h-6 items-center rounded-full bg-amber-50 px-2.5 text-xs font-medium text-amber-700">{job.progress}%</span>
+								{/if}
+							</div>
+						</div>
+					{/each}
+				</div>
 			</div>
 		</div>
 	</div>

@@ -10,12 +10,23 @@
 	let enrichType: 'mix' | 'phone' | 'email' = $state('mix');
 	let personalEmail = $state(false);
 
-	const enrichments = [
+	// V1: enrichment history (old model — lists inside enrich section)
+	const v1Enrichments = [
 		{ name: 'Q1 Sales Leads', type: 'CSV', contacts: 234, found: 198, status: 'completed', date: 'Jan 15, 2025' },
 		{ name: 'LinkedIn Import', type: 'LinkedIn', contacts: 89, found: 67, status: 'completed', date: 'Jan 20, 2025' },
 		{ name: 'Manual Batch #3', type: 'Manual', contacts: 12, found: 10, status: 'completed', date: 'Feb 1, 2025' },
 		{ name: 'Series B Founders', type: 'CSV', contacts: 156, found: 0, status: 'running', date: 'Feb 14, 2025' },
 		{ name: 'VP Engineering EU', type: 'CSV', contacts: 412, found: 387, status: 'completed', date: 'Feb 20, 2025' },
+	];
+
+	// V2: jobs — tracks the process, not the result. Results live in Lists.
+	type Job = { id: string; list: string; listId: string; input: string; enrichType: string; contacts: number; found: number; status: 'completed' | 'running' | 'queued'; progress: number; started: string };
+	const jobs: Job[] = [
+		{ id: 'j1', list: 'SaaS Founders Q1', listId: '1', input: 'CSV', enrichType: 'Mix', contacts: 234, found: 198, status: 'completed', progress: 100, started: '2 hours ago' },
+		{ id: 'j2', list: 'Series B Startups', listId: '3', input: 'CSV', enrichType: 'Email', contacts: 156, found: 72, status: 'running', progress: 46, started: '12 min ago' },
+		{ id: 'j3', list: 'VP Sales Software', listId: '2', input: 'Manual', enrichType: 'Phone', contacts: 12, found: 0, status: 'queued', progress: 0, started: '3 min ago' },
+		{ id: 'j4', list: 'Agency Owners USA', listId: '5', input: 'CSV', enrichType: 'Mix', contacts: 89, found: 45, status: 'completed', progress: 100, started: '1 day ago' },
+		{ id: 'j5', list: 'European Marketing Leads', listId: '4', input: 'CSV', enrichType: 'Mix + Personal', contacts: 412, found: 387, status: 'completed', progress: 100, started: '3 days ago' },
 	];
 </script>
 
@@ -95,50 +106,116 @@
 					</button>
 				</div>
 
-				<!-- Enrichment history (below mode cards) -->
-				<div class="mt-12">
-					<h2 class="text-grey-900 text-xl font-semibold">Contact List</h2>
-					<div class="mt-6 flex items-center gap-2">
-						{#each ['All Lists', 'Contact Lists', 'CSV Files'] as tab, i}
-							<button
-								class="h-8 rounded-full px-3 text-sm font-medium transition-colors"
-								class:bg-grey-100={i === 0}
-								class:text-grey-900={i === 0}
-								class:text-grey-600={i !== 0}
-							>
-								{tab}
-							</button>
-						{/each}
-					</div>
-					<div class="mt-4 mb-20">
-						{#each enrichments as enrich}
-							<div class="border-grey-100 hover:bg-grey-50 flex items-center justify-between border-b px-4 py-4 transition-colors">
-								<div class="flex items-center gap-4">
-									<div class="bg-violet-50 flex h-10 w-10 items-center justify-center rounded-lg">
-										<span class="material-icons-round text-violet-700 text-lg">
-											{enrich.type === 'CSV' ? 'description' : enrich.type === 'LinkedIn' ? 'link' : 'edit'}
+				<!-- V2: Recent jobs (tracks process, not results) -->
+				{#if version === 'v2'}
+					<div class="mt-12 mb-20">
+						<div class="flex items-center justify-between">
+							<h2 class="text-grey-900 text-lg font-semibold">Recent Jobs</h2>
+							<span class="text-grey-500 text-sm">{jobs.filter(j => j.status === 'running').length} running</span>
+						</div>
+						<div class="border-grey-200 mt-4 overflow-hidden rounded-xl border">
+							{#each jobs as job, i}
+								<div
+									class="hover:bg-grey-50 flex items-center gap-4 px-5 py-4 transition-colors"
+									class:border-grey-100={i < jobs.length - 1}
+									class:border-b={i < jobs.length - 1}
+								>
+									<!-- Status icon -->
+									<div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg {job.status === 'running' ? 'bg-amber-50' : job.status === 'queued' ? 'bg-grey-100' : 'bg-emerald-50'}">
+										<span class="material-icons-round text-lg {job.status === 'running' ? 'text-amber-600' : job.status === 'queued' ? 'text-grey-500' : 'text-emerald-600'}">
+											{job.status === 'running' ? 'sync' : job.status === 'queued' ? 'schedule' : 'check_circle'}
 										</span>
 									</div>
-									<div>
-										<p class="text-grey-900 text-sm font-medium">{enrich.name}</p>
-										<p class="text-grey-500 text-xs">{enrich.type} &middot; {enrich.date}</p>
+
+									<!-- Job info -->
+									<div class="min-w-0 flex-1">
+										<div class="flex items-center gap-2">
+											<p class="text-grey-900 truncate text-sm font-medium">{job.list}</p>
+											<span class="text-grey-400 text-xs">&middot;</span>
+											<span class="text-grey-500 text-xs">{job.input}</span>
+											<span class="text-grey-400 text-xs">&middot;</span>
+											<span class="text-grey-500 text-xs">{job.enrichType}</span>
+										</div>
+										<div class="mt-1.5 flex items-center gap-3">
+											<div class="bg-grey-200 h-1.5 w-32 overflow-hidden rounded-full">
+												<div
+													class="h-full rounded-full transition-all {job.status === 'running' ? 'bg-amber-500' : job.status === 'queued' ? 'bg-grey-400' : 'bg-emerald-500'}"
+													style:width="{job.progress}%"
+												></div>
+											</div>
+											<span class="text-grey-500 text-xs">
+												{#if job.status === 'queued'}
+													Queued
+												{:else}
+													{job.found}/{job.contacts} found
+												{/if}
+											</span>
+										</div>
+									</div>
+
+									<!-- Time + action -->
+									<div class="flex shrink-0 items-center gap-3">
+										<span class="text-grey-400 text-xs">{job.started}</span>
+										{#if job.status === 'completed'}
+											<a href="{base}/app/prospects/{job.listId}" class="btn-ghost flex h-7 items-center gap-1 px-2 text-xs text-violet-700">
+												View in Lists
+												<span class="material-icons-round text-sm">arrow_forward</span>
+											</a>
+										{:else if job.status === 'running'}
+											<span class="inline-flex h-6 items-center rounded-full bg-amber-50 px-2.5 text-xs font-medium text-amber-700">{job.progress}%</span>
+										{/if}
 									</div>
 								</div>
-								<div class="flex items-center gap-6">
-									<div class="text-right">
-										<p class="text-grey-900 text-sm font-medium">{enrich.found}/{enrich.contacts}</p>
-										<p class="text-grey-500 text-xs">contacts found</p>
-									</div>
-									{#if enrich.status === 'completed'}
-										<span class="inline-flex h-6 items-center rounded-full bg-emerald-50 px-2.5 text-xs font-medium text-emerald-700">Completed</span>
-									{:else}
-										<span class="inline-flex h-6 items-center rounded-full bg-amber-50 px-2.5 text-xs font-medium text-amber-700">Running</span>
-									{/if}
-								</div>
-							</div>
-						{/each}
+							{/each}
+						</div>
 					</div>
-				</div>
+
+				<!-- V1: old enrichment history (lists inside enrich section) -->
+				{:else}
+					<div class="mt-12">
+						<h2 class="text-grey-900 text-xl font-semibold">Contact List</h2>
+						<div class="mt-6 flex items-center gap-2">
+							{#each ['All Lists', 'Contact Lists', 'CSV Files'] as tab, i}
+								<button
+									class="h-8 rounded-full px-3 text-sm font-medium transition-colors"
+									class:bg-grey-100={i === 0}
+									class:text-grey-900={i === 0}
+									class:text-grey-600={i !== 0}
+								>
+									{tab}
+								</button>
+							{/each}
+						</div>
+						<div class="mt-4 mb-20">
+							{#each v1Enrichments as enrich}
+								<div class="border-grey-100 hover:bg-grey-50 flex items-center justify-between border-b px-4 py-4 transition-colors">
+									<div class="flex items-center gap-4">
+										<div class="bg-violet-50 flex h-10 w-10 items-center justify-center rounded-lg">
+											<span class="material-icons-round text-violet-700 text-lg">
+												{enrich.type === 'CSV' ? 'description' : enrich.type === 'LinkedIn' ? 'link' : 'edit'}
+											</span>
+										</div>
+										<div>
+											<p class="text-grey-900 text-sm font-medium">{enrich.name}</p>
+											<p class="text-grey-500 text-xs">{enrich.type} &middot; {enrich.date}</p>
+										</div>
+									</div>
+									<div class="flex items-center gap-6">
+										<div class="text-right">
+											<p class="text-grey-900 text-sm font-medium">{enrich.found}/{enrich.contacts}</p>
+											<p class="text-grey-500 text-xs">contacts found</p>
+										</div>
+										{#if enrich.status === 'completed'}
+											<span class="inline-flex h-6 items-center rounded-full bg-emerald-50 px-2.5 text-xs font-medium text-emerald-700">Completed</span>
+										{:else}
+											<span class="inline-flex h-6 items-center rounded-full bg-amber-50 px-2.5 text-xs font-medium text-amber-700">Running</span>
+										{/if}
+									</div>
+								</div>
+							{/each}
+						</div>
+					</div>
+				{/if}
 
 			{:else}
 				<!-- Input area -->

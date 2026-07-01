@@ -6,8 +6,8 @@
 	let version = $derived($page.params.version);
 	let base = $derived(`${svelteBase}/${version}`);
 
-	let mode: '' | 'csv' | 'manual' = $state('');
-	let enrichType: 'mix' | 'phone' | 'email' = $state('mix');
+	let mode: '' | 'csv' | 'manual' | 'list' = $state('');
+	let enrichType: 'phone-email' | 'phone' | 'email' = $state('phone-email');
 	let personalEmail = $state(false);
 
 	// V1: enrichment history (old model — lists inside enrich section)
@@ -19,14 +19,22 @@
 		{ name: 'VP Engineering EU', type: 'CSV', contacts: 412, found: 387, status: 'completed', date: 'Feb 20, 2025' },
 	];
 
-	// V2: jobs — tracks the process, not the result. Results live in Lists.
-	type Job = { id: string; list: string; listId: string; input: string; enrichType: string; contacts: number; found: number; status: 'completed' | 'running' | 'queued'; progress: number; started: string };
-	const jobs: Job[] = [
-		{ id: 'j1', list: 'SaaS Founders Q1', listId: '1', input: 'CSV', enrichType: 'Mix', contacts: 234, found: 198, status: 'completed', progress: 100, started: '2 hours ago' },
-		{ id: 'j2', list: 'Series B Startups', listId: '3', input: 'CSV', enrichType: 'Email', contacts: 156, found: 72, status: 'running', progress: 46, started: '12 min ago' },
-		{ id: 'j3', list: 'VP Sales Software', listId: '2', input: 'Manual', enrichType: 'Phone', contacts: 12, found: 0, status: 'queued', progress: 0, started: '3 min ago' },
-		{ id: 'j4', list: 'Agency Owners USA', listId: '5', input: 'CSV', enrichType: 'Mix', contacts: 89, found: 45, status: 'completed', progress: 100, started: '1 day ago' },
-		{ id: 'j5', list: 'European Marketing Leads', listId: '4', input: 'CSV', enrichType: 'Mix + Personal', contacts: 412, found: 387, status: 'completed', progress: 100, started: '3 days ago' },
+	// V2: Recent Enrichments — tracks the process, not the result. Results live in Lists.
+	type Enrichment = { id: string; list: string; listId: string; input: string; enrichType: string; contacts: number; found: number; status: 'completed' | 'running' | 'queued'; progress: number; started: string };
+	const recentEnrichments: Enrichment[] = [
+		{ id: 'e1', list: 'SaaS Founders Q1', listId: '1', input: 'CSV', enrichType: 'Phone + Email', contacts: 234, found: 198, status: 'completed', progress: 100, started: '2 hours ago' },
+		{ id: 'e2', list: 'Series B Startups', listId: '3', input: 'CSV', enrichType: 'Email', contacts: 156, found: 72, status: 'running', progress: 46, started: '12 min ago' },
+		{ id: 'e3', list: 'VP Sales Software', listId: '2', input: 'Manual', enrichType: 'Phone', contacts: 12, found: 0, status: 'queued', progress: 0, started: '3 min ago' },
+		{ id: 'e4', list: 'Agency Owners USA', listId: '5', input: 'CSV', enrichType: 'Phone + Email', contacts: 89, found: 45, status: 'completed', progress: 100, started: '1 day ago' },
+		{ id: 'e5', list: 'European Marketing Leads', listId: '4', input: 'List', enrichType: 'Phone + Email + Personal', contacts: 412, found: 387, status: 'completed', progress: 100, started: '3 days ago' },
+	];
+
+	// Mock existing lists for "Pick from your lists"
+	const existingLists = [
+		{ id: '1', name: 'SaaS Founders Q1', count: 234, enriched: 198 },
+		{ id: '2', name: 'VP Sales Software', count: 187, enriched: 0 },
+		{ id: '4', name: 'European Marketing Leads', count: 156, enriched: 89 },
+		{ id: '5', name: 'Agency Owners USA', count: 89, enriched: 0 },
 	];
 </script>
 
@@ -56,7 +64,7 @@
 			{#if mode !== '' || (version === 'v2' && mode === '')}
 				<div class="mb-6 flex gap-3">
 					{#each [
-						{ id: 'mix', label: 'Mix', icon: 'auto_awesome' },
+						{ id: 'phone-email', label: 'Phone + Email', icon: 'auto_awesome' },
 						{ id: 'phone', label: 'Phone', icon: 'phone' },
 						{ id: 'email', label: 'Email', icon: 'email' },
 					] as type}
@@ -104,65 +112,70 @@
 						<span class="text-grey-900 font-semibold">Enrich manually</span>
 						<span class="text-grey-500 text-sm">Add contacts one by one</span>
 					</button>
+					{#if version === 'v2'}
+						<button
+							class="border-grey-200 hover:border-violet-200 hover:bg-violet-50 flex flex-1 flex-col items-center gap-3 rounded-2xl border p-8 transition-colors"
+							onclick={() => { mode = 'list'; }}
+						>
+							<span class="material-icons-round text-violet-700 text-3xl">format_list_bulleted</span>
+							<span class="text-grey-900 font-semibold">Pick from your lists</span>
+							<span class="text-grey-500 text-sm">Enrich contacts already in a list</span>
+						</button>
+					{/if}
 				</div>
 
-				<!-- V2: Recent jobs (tracks process, not results) -->
+				<!-- V2: Recent Enrichments -->
 				{#if version === 'v2'}
 					<div class="mt-12 mb-20">
 						<div class="flex items-center justify-between">
-							<h2 class="text-grey-900 text-lg font-semibold">Recent Jobs</h2>
-							<span class="text-grey-500 text-sm">{jobs.filter(j => j.status === 'running').length} running</span>
+							<h2 class="text-grey-900 text-lg font-semibold">Recent Enrichments</h2>
+							<span class="text-grey-500 text-sm">{recentEnrichments.filter(e => e.status === 'running').length} running</span>
 						</div>
 						<div class="border-grey-200 mt-4 overflow-hidden rounded-xl border">
-							{#each jobs as job, i}
+							{#each recentEnrichments as enrichment, i}
 								<div
 									class="hover:bg-grey-50 flex items-center gap-4 px-5 py-4 transition-colors"
-									class:border-grey-100={i < jobs.length - 1}
-									class:border-b={i < jobs.length - 1}
+									class:border-grey-100={i < recentEnrichments.length - 1}
+									class:border-b={i < recentEnrichments.length - 1}
 								>
-									<!-- Status icon -->
-									<div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg {job.status === 'running' ? 'bg-amber-50' : job.status === 'queued' ? 'bg-grey-100' : 'bg-emerald-50'}">
-										<span class="material-icons-round text-lg {job.status === 'running' ? 'text-amber-600' : job.status === 'queued' ? 'text-grey-500' : 'text-emerald-600'}">
-											{job.status === 'running' ? 'sync' : job.status === 'queued' ? 'schedule' : 'check_circle'}
+									<div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg {enrichment.status === 'running' ? 'bg-amber-50' : enrichment.status === 'queued' ? 'bg-grey-100' : 'bg-emerald-50'}">
+										<span class="material-icons-round text-lg {enrichment.status === 'running' ? 'text-amber-600' : enrichment.status === 'queued' ? 'text-grey-500' : 'text-emerald-600'}">
+											{enrichment.status === 'running' ? 'sync' : enrichment.status === 'queued' ? 'schedule' : 'check_circle'}
 										</span>
 									</div>
-
-									<!-- Job info -->
 									<div class="min-w-0 flex-1">
 										<div class="flex items-center gap-2">
-											<p class="text-grey-900 truncate text-sm font-medium">{job.list}</p>
+											<p class="text-grey-900 truncate text-sm font-medium">{enrichment.list}</p>
 											<span class="text-grey-400 text-xs">&middot;</span>
-											<span class="text-grey-500 text-xs">{job.input}</span>
+											<span class="text-grey-500 text-xs">{enrichment.input}</span>
 											<span class="text-grey-400 text-xs">&middot;</span>
-											<span class="text-grey-500 text-xs">{job.enrichType}</span>
+											<span class="text-grey-500 text-xs">{enrichment.enrichType}</span>
 										</div>
 										<div class="mt-1.5 flex items-center gap-3">
 											<div class="bg-grey-200 h-1.5 w-32 overflow-hidden rounded-full">
 												<div
-													class="h-full rounded-full transition-all {job.status === 'running' ? 'bg-amber-500' : job.status === 'queued' ? 'bg-grey-400' : 'bg-emerald-500'}"
-													style:width="{job.progress}%"
+													class="h-full rounded-full transition-all {enrichment.status === 'running' ? 'bg-amber-500' : enrichment.status === 'queued' ? 'bg-grey-400' : 'bg-emerald-500'}"
+													style:width="{enrichment.progress}%"
 												></div>
 											</div>
 											<span class="text-grey-500 text-xs">
-												{#if job.status === 'queued'}
+												{#if enrichment.status === 'queued'}
 													Queued
 												{:else}
-													{job.found}/{job.contacts} found
+													{enrichment.found}/{enrichment.contacts} found
 												{/if}
 											</span>
 										</div>
 									</div>
-
-									<!-- Time + action -->
 									<div class="flex shrink-0 items-center gap-3">
-										<span class="text-grey-400 text-xs">{job.started}</span>
-										{#if job.status === 'completed'}
-											<a href="{base}/app/prospects/{job.listId}" class="btn-ghost flex h-7 items-center gap-1 px-2 text-xs text-violet-700">
+										<span class="text-grey-400 text-xs">{enrichment.started}</span>
+										{#if enrichment.status === 'completed'}
+											<a href="{base}/app/prospects/{enrichment.listId}" class="btn-ghost flex h-7 items-center gap-1 px-2 text-xs text-violet-700">
 												View in Lists
 												<span class="material-icons-round text-sm">arrow_forward</span>
 											</a>
-										{:else if job.status === 'running'}
-											<span class="inline-flex h-6 items-center rounded-full bg-amber-50 px-2.5 text-xs font-medium text-amber-700">{job.progress}%</span>
+										{:else if enrichment.status === 'running'}
+											<span class="inline-flex h-6 items-center rounded-full bg-amber-50 px-2.5 text-xs font-medium text-amber-700">{enrichment.progress}%</span>
 										{/if}
 									</div>
 								</div>
@@ -170,7 +183,7 @@
 						</div>
 					</div>
 
-				<!-- V1: old enrichment history (lists inside enrich section) -->
+				<!-- V1: old enrichment history -->
 				{:else}
 					<div class="mt-12">
 						<h2 class="text-grey-900 text-xl font-semibold">Contact List</h2>
@@ -227,7 +240,7 @@
 							<p class="text-grey-500 mt-1 text-sm">Supports .csv, .xlsx — up to 64,000 contacts</p>
 							<button class="btn-primary mt-4 h-10 px-4 text-sm">Select File</button>
 						</div>
-					{:else}
+					{:else if mode === 'manual'}
 						<div class="flex flex-col gap-3">
 							{#each [1, 2, 3] as _}
 								<div class="border-grey-200 flex gap-3 rounded-lg border p-3">
@@ -245,6 +258,22 @@
 								Add Contact
 							</button>
 						</div>
+					{:else if mode === 'list'}
+						<!-- Pick from your lists -->
+						<div class="flex flex-col gap-1">
+							{#each existingLists as list}
+								<button class="hover:bg-grey-50 flex items-center justify-between rounded-xl px-4 py-3 transition-colors">
+									<div class="flex items-center gap-3">
+										<span class="material-icons-round text-grey-400 text-lg">folder</span>
+										<div class="text-left">
+											<p class="text-grey-900 text-sm font-medium">{list.name}</p>
+											<p class="text-grey-500 text-xs">{list.count} contacts &middot; {list.enriched > 0 ? `${Math.round((list.enriched / list.count) * 100)}% enriched` : 'Not enriched'}</p>
+										</div>
+									</div>
+									<span class="material-icons-round text-grey-400 text-lg">chevron_right</span>
+								</button>
+							{/each}
+						</div>
 					{/if}
 				</div>
 
@@ -252,14 +281,16 @@
 				{#if version === 'v2'}
 					<div class="border-grey-200 mt-6 mb-20 flex items-center justify-between rounded-xl border bg-white p-4 shadow-sm">
 						<div class="flex items-center gap-4">
-							<div class="flex items-center gap-2">
-								<span class="material-icons-round text-grey-500 text-base">folder</span>
-								<select class="input h-9 text-sm">
-									<option>Create new list...</option>
-									<option>SaaS Founders Q1</option>
-									<option>VP Sales Software</option>
-								</select>
-							</div>
+							{#if mode !== 'list'}
+								<div class="flex items-center gap-2">
+									<span class="material-icons-round text-grey-500 text-base">folder</span>
+									<select class="input h-9 text-sm">
+										<option>Create new list...</option>
+										<option>SaaS Founders Q1</option>
+										<option>VP Sales Software</option>
+									</select>
+								</div>
+							{/if}
 						</div>
 						<button class="btn-primary h-10 gap-1.5 px-4 text-sm font-semibold" onclick={() => toast.show('Enrichment started')}>
 							<span class="material-icons-round text-sm text-white">auto_awesome</span>

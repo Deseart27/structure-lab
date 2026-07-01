@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { base as svelteBase } from '$app/paths';
 	import { page } from '$app/stores';
+	import { toast } from '$lib/toast.svelte';
 	let base = $derived(`${svelteBase}/${$page.params.version}`);
 	let emailInput = $state('');
 </script>
@@ -76,7 +77,7 @@
 					</div>
 					<div class="text-grey-500 text-xs">You only pay for people we find</div>
 				</div>
-				<button class="btn-primary h-10 px-4 text-sm font-semibold">
+				<button class="btn-primary h-10 px-4 text-sm font-semibold" onclick={() => toast.show('Reverse lookup started')}>
 					Start Lookup
 				</button>
 			</div>

@@ -2,6 +2,7 @@
 	import { page } from '$app/stores';
 	import Navbar from '$lib/components/Navbar.svelte';
 	import SubNav from '$lib/components/SubNav.svelte';
+	import Toast from '$lib/components/Toast.svelte';
 	let { children } = $props();
 
 	let version = $derived($page.params.version);
@@ -14,3 +15,4 @@
 	{/if}
 	{@render children()}
 </div>
+<Toast />

@@ -1,13 +1,23 @@
 <script lang="ts">
 	import { base as svelteBase } from '$app/paths';
 	import { page } from '$app/stores';
+	import { toast } from '$lib/toast.svelte';
 
 	let base = $derived(`${svelteBase}/${$page.params.version}`);
 	let listId = $derived($page.params.listId);
 
-	const listsData: Record<string, { name: string; source: string; contacts: typeof contacts }> = {
-		'1': { name: 'SaaS Founders Q1', source: 'search', contacts: [] },
+	const listsData: Record<string, { name: string; source: string }> = {
+		'1': { name: 'SaaS Founders Q1', source: 'search' },
+		'2': { name: 'VP Sales Software', source: 'search' },
+		'3': { name: 'Series B Startups', source: 'csv' },
+		'4': { name: 'European Marketing Leads', source: 'csv' },
+		'5': { name: 'Agency Owners USA', source: 'manual' },
+		'6': { name: 'Newsletter Reverse Lookup', source: 'reverse' },
+		'7': { name: 'Clay Workflow Import', source: 'api' },
+		'8': { name: 'Claude MCP Batch', source: 'mcp' },
 	};
+
+	let currentList = $derived(listsData[listId] ?? { name: `List #${listId}`, source: 'search' });
 
 	const contacts = [
 		{ id: '1', name: 'Sarah Chen', title: 'VP of Sales', company: 'Stripe', location: 'San Francisco, US', source: 'search', status: 'enriched', phone: '+1 415 555 0101', email: 'sarah.chen@stripe.com', emailStatus: 'valid', crmSynced: true },
@@ -63,30 +73,30 @@
 			<a href="{base}/app/prospects" class="btn-ghost flex h-8 w-8 items-center justify-center rounded-lg p-0">
 				<span class="material-icons-round text-grey-600 text-lg">arrow_back</span>
 			</a>
-			<h1 class="text-grey-900 text-base font-semibold">SaaS Founders Q1</h1>
+			<h1 class="text-grey-900 text-base font-semibold">{currentList.name}</h1>
 			<span class="text-grey-500 text-sm">{contacts.length} contacts</span>
-			<span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium text-blue-600 bg-blue-50">
-				<span class="material-icons-round text-xs">search</span>
-				Search
+			<span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium {sourceLabels[currentList.source].color}">
+				<span class="material-icons-round text-xs">{sourceLabels[currentList.source].icon}</span>
+				{sourceLabels[currentList.source].label}
 			</span>
 		</div>
 		<div class="flex items-center gap-2">
 			{#if selectedContacts.size > 0}
 				<span class="text-grey-600 mr-1 text-sm">{selectedContacts.size} selected</span>
 			{/if}
-			<button class="btn-ghost h-8 gap-1.5 px-3 text-sm">
+			<button class="btn-ghost h-8 gap-1.5 px-3 text-sm" onclick={() => toast.show('Enrichment started')}>
 				<span class="material-icons-round text-grey-600 text-base">auto_awesome</span>
 				Enrich
 			</button>
-			<button class="btn-ghost h-8 gap-1.5 px-3 text-sm">
+			<button class="btn-ghost h-8 gap-1.5 px-3 text-sm" onclick={() => toast.show('Reverse enrichment started')}>
 				<span class="material-icons-round text-grey-600 text-base">person_search</span>
 				Reverse Enrich
 			</button>
-			<button class="btn-ghost h-8 gap-1.5 px-3 text-sm">
+			<button class="btn-ghost h-8 gap-1.5 px-3 text-sm" onclick={() => toast.show('Export started — CSV will download shortly')}>
 				<span class="material-icons-round text-grey-600 text-base">download</span>
 				Export
 			</button>
-			<button class="btn-ghost h-8 gap-1.5 px-3 text-sm" style="color: #ff7a59;">
+			<button class="btn-ghost h-8 gap-1.5 px-3 text-sm" style="color: #ff7a59;" onclick={() => toast.show('Contacts pushed to HubSpot')}>
 				<span class="material-icons-round text-base">hub</span>
 				Push to HubSpot
 			</button>

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { base as svelteBase } from '$app/paths';
 	import { page } from '$app/stores';
+	import { toast } from '$lib/toast.svelte';
 
 	let version = $derived($page.params.version);
 	let base = $derived(`${svelteBase}/${version}`);
@@ -183,7 +184,7 @@
 								</select>
 							</div>
 						</div>
-						<button class="btn-primary h-10 gap-1.5 px-4 text-sm font-semibold">
+						<button class="btn-primary h-10 gap-1.5 px-4 text-sm font-semibold" onclick={() => toast.show('Enrichment started')}>
 							<span class="material-icons-round text-sm text-white">auto_awesome</span>
 							Start Enrichment
 						</button>

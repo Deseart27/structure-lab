@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { base as svelteBase } from '$app/paths';
 	import { page } from '$app/stores';
+	import { toast } from '$lib/toast.svelte';
 
 	let base = $derived(`${svelteBase}/${$page.params.version}`);
 
@@ -69,20 +70,20 @@
 		<div class="flex items-center gap-2">
 			{#if selectedLists.size > 0}
 				<span class="text-grey-600 mr-2 text-sm">{selectedLists.size} selected</span>
-				<button class="btn-ghost h-8 gap-1.5 px-3 text-sm">
+				<button class="btn-ghost h-8 gap-1.5 px-3 text-sm" onclick={() => toast.show(`Enriching ${selectedLists.size} list${selectedLists.size > 1 ? 's' : ''}...`)}>
 					<span class="material-icons-round text-grey-600 text-base">auto_awesome</span>
 					Enrich
 				</button>
-				<button class="btn-ghost h-8 gap-1.5 px-3 text-sm">
+				<button class="btn-ghost h-8 gap-1.5 px-3 text-sm" onclick={() => toast.show('Export started — CSV will download shortly')}>
 					<span class="material-icons-round text-grey-600 text-base">download</span>
 					Export
 				</button>
-				<button class="btn-ghost h-8 gap-1.5 px-3 text-sm" style="color: #ff7a59;">
+				<button class="btn-ghost h-8 gap-1.5 px-3 text-sm" style="color: #ff7a59;" onclick={() => toast.show(`${selectedLists.size} list${selectedLists.size > 1 ? 's' : ''} pushed to HubSpot`)}>
 					<span class="material-icons-round text-base">hub</span>
 					Push to HubSpot
 				</button>
 			{/if}
-			<a href="{base}/app/find" class="btn-primary h-8 gap-1.5 px-3 text-sm">
+			<a href="{base}/app/enrich" class="btn-primary h-8 gap-1.5 px-3 text-sm">
 				<span class="material-icons-round text-sm text-white">add</span>
 				New List
 			</a>
@@ -168,13 +169,13 @@
 						<td class="text-grey-500 px-4 py-3 text-sm">{list.updated}</td>
 						<td class="px-4 py-3 text-right">
 							<div class="flex items-center justify-end gap-1">
-								<button class="btn-ghost h-7 w-7 p-0" title="Enrich">
+								<button class="btn-ghost h-7 w-7 p-0" title="Enrich" onclick={() => toast.show(`Enriching "${list.name}"...`)}>
 									<span class="material-icons-round text-grey-500 text-base">auto_awesome</span>
 								</button>
-								<button class="btn-ghost h-7 w-7 p-0" title="Export">
+								<button class="btn-ghost h-7 w-7 p-0" title="Export" onclick={() => toast.show(`Exporting "${list.name}"...`)}>
 									<span class="material-icons-round text-grey-500 text-base">download</span>
 								</button>
-								<button class="btn-ghost h-7 w-7 p-0" title="Push to HubSpot">
+								<button class="btn-ghost h-7 w-7 p-0" title="Push to HubSpot" onclick={() => toast.show(`"${list.name}" pushed to HubSpot`)}>
 									<span class="material-icons-round text-base" style="color: #ff7a59;">hub</span>
 								</button>
 							</div>

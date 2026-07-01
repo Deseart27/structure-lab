@@ -1,4 +1,8 @@
 <script lang="ts">
+	import { page } from '$app/stores';
+	import { toast } from '$lib/toast.svelte';
+	let version = $derived($page.params.version);
+
 	const companies = [
 		{ name: 'Stripe', location: 'San Francisco, US', headcount: 8000, industry: 'Financial Technology', yearFounded: 2010, type: 'Private' },
 		{ name: 'HubSpot', location: 'Boston, US', headcount: 7400, industry: 'Software', yearFounded: 2006, type: 'Public' },
@@ -21,11 +25,21 @@
 			<h2 class="text-grey-900 text-base font-semibold">{companies.length} companies</h2>
 		</div>
 		<div class="flex items-center gap-2">
-			<button class="btn-ghost h-8 gap-1.5 px-3 text-sm">
+			<button class="btn-ghost h-8 gap-1.5 px-3 text-sm" onclick={() => toast.show('Export started — CSV will download shortly')}>
 				<span class="material-icons-round text-grey-600 text-base">download</span>
 				Export
 			</button>
-			<button class="btn-primary h-8 gap-1.5 px-3 text-sm">
+			{#if version === 'v2'}
+				<button class="btn-ghost h-8 gap-1.5 px-3 text-sm" onclick={() => toast.show('Companies saved to list')}>
+					<span class="material-icons-round text-grey-600 text-base">playlist_add</span>
+					Save to list
+				</button>
+				<button class="btn-ghost h-8 gap-1.5 px-3 text-sm" style="color: #ff7a59;" onclick={() => toast.show('Companies pushed to HubSpot')}>
+					<span class="material-icons-round text-base">hub</span>
+					Push to HubSpot
+				</button>
+			{/if}
+			<button class="btn-primary h-8 gap-1.5 px-3 text-sm" onclick={() => toast.show('Finding employees...')}>
 				<span class="material-icons-round text-sm text-white">group</span>
 				Find employees
 			</button>

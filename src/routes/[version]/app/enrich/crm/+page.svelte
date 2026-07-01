@@ -1,7 +1,10 @@
 <script lang="ts">
 	import { base as svelteBase } from '$app/paths';
 	import { page } from '$app/stores';
+	import { toast } from '$lib/toast.svelte';
 	let base = $derived(`${svelteBase}/${$page.params.version}`);
+
+	let enrichType: 'mix' | 'phone' | 'email' = $state('mix');
 
 	const crmSources = [
 		{ name: 'HubSpot', icon: 'hub', color: '#ff7a59', connected: true, lists: 12, lastSync: '2 hours ago' },
@@ -30,17 +33,18 @@
 			<!-- Enrichment type selector -->
 			<div class="mb-6 flex gap-3">
 				{#each [
-					{ id: 'mix', label: 'Mix', icon: 'auto_awesome', active: true },
-					{ id: 'phone', label: 'Phone', icon: 'phone', active: false },
-					{ id: 'email', label: 'Email', icon: 'email', active: false },
+					{ id: 'mix', label: 'Mix', icon: 'auto_awesome' },
+					{ id: 'phone', label: 'Phone', icon: 'phone' },
+					{ id: 'email', label: 'Email', icon: 'email' },
 				] as type}
 					<button
 						class="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border text-sm font-medium transition-colors"
-						class:border-violet-200={type.active}
-						class:bg-violet-50={type.active}
-						class:text-violet-800={type.active}
-						class:border-grey-200={!type.active}
-						class:text-grey-700={!type.active}
+						class:border-violet-200={enrichType === type.id}
+						class:bg-violet-50={enrichType === type.id}
+						class:text-violet-800={enrichType === type.id}
+						class:border-grey-200={enrichType !== type.id}
+						class:text-grey-700={enrichType !== type.id}
+						onclick={() => { enrichType = type.id as typeof enrichType; }}
 					>
 						<span class="material-icons-round text-base">{type.icon}</span>
 						{type.label}
@@ -98,7 +102,7 @@
 										<span class="text-grey-600 text-xs">{Math.round((list.enriched / list.count) * 100)}%</span>
 									</div>
 								{/if}
-								<button class="btn-ghost h-7 gap-1 px-2 text-xs">
+								<button class="btn-ghost h-7 gap-1 px-2 text-xs" onclick={() => toast.show(`Enriching "${list.name}"...`)}>
 									<span class="material-icons-round text-base">auto_awesome</span>
 									Enrich
 								</button>

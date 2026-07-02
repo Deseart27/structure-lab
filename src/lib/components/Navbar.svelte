@@ -15,7 +15,7 @@
 		<Navigation />
 	</div>
 
-	<div class="flex shrink-0 items-center gap-4 lg:gap-12">
+	<div class="flex shrink-0 items-center gap-3 lg:gap-5">
 		<!-- Credit chip -->
 		<button class="text-grey-900 flex h-8 items-center rounded-3xl border border-amber-200 bg-amber-50 py-1 pr-3 pl-2 text-sm font-medium">
 			<span class="material-icons-round mr-1.5 text-base text-amber-500">stars</span>

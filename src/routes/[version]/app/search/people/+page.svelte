@@ -46,6 +46,7 @@
 	let v6ExportOpen = $state(false);
 	let v6AddToListOpen = $state(false);
 	let v6EnrichModalOpen = $state(false);
+	let v6RowListOpen = $state<number | null>(null);
 
 	// Batch enrich modal state
 	let v6ModalEmailPro = $state(true);
@@ -296,44 +297,81 @@
 							<!-- Email -->
 							<td class="px-4 py-3 text-sm">
 								{#if v6Enriched.has(i)}
-									<span class="text-grey-800">{mockEmail(person.name, person.company)}</span>
+									<span class="text-grey-800 font-mono text-xs">{mockEmail(person.name, person.company)}</span>
+								{:else if v6Enriching.has(i)}
+									<span class="inline-flex items-center gap-1.5 text-xs text-grey-400">
+										<svg class="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+											<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+											<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+										</svg>
+										Finding…
+									</span>
 								{:else}
-									<span class="text-grey-300">—</span>
+									<button
+										class="flex h-7 items-center gap-1 rounded-lg border border-grey-200 bg-white px-2 text-xs font-medium text-grey-600 shadow-sm transition-colors hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700"
+										onclick={() => v6EnrichRow(i)}
+									>
+										<span class="material-icons-round text-sm">mail</span>
+										Find email
+									</button>
 								{/if}
 							</td>
 							<!-- Phone -->
 							<td class="px-4 py-3 text-sm">
 								{#if v6Enriched.has(i)}
-									<span class="text-grey-800">{mockPhone(i)}</span>
-								{:else}
-									<span class="text-grey-300">—</span>
-								{/if}
-							</td>
-							<td class="text-grey-700 px-4 py-3 text-sm">{person.industry}</td>
-							<!-- Row Enrich button -->
-							<td class="px-4 py-3">
-								{#if v6Enriched.has(i)}
-									<span class="inline-flex items-center gap-1 text-xs text-emerald-600 font-medium">
-										<span class="material-icons-round text-sm">check_circle</span>
-										Enriched
-									</span>
+									<span class="text-grey-800 font-mono text-xs">{mockPhone(i)}</span>
 								{:else if v6Enriching.has(i)}
-									<span class="inline-flex items-center gap-1 text-xs text-grey-400">
-										<svg class="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+									<span class="inline-flex items-center gap-1.5 text-xs text-grey-400">
+										<svg class="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
 											<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
 											<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
 										</svg>
-										Enriching…
+										Finding…
 									</span>
 								{:else}
 									<button
-										class="btn-ghost h-7 gap-1 px-2.5 text-xs"
+										class="flex h-7 items-center gap-1 rounded-lg border border-grey-200 bg-white px-2 text-xs font-medium text-grey-600 shadow-sm transition-colors hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700"
 										onclick={() => v6EnrichRow(i)}
 									>
-										<span class="material-icons-round text-xs">auto_awesome</span>
-										Enrich
+										<span class="material-icons-round text-sm">phone</span>
+										Find phone
 									</button>
 								{/if}
+							</td>
+							<td class="text-grey-700 px-4 py-3 text-sm">{person.industry}</td>
+							<!-- Quick add to list -->
+							<td class="px-2 py-3">
+								<div class="relative">
+									<button
+										class="flex h-7 w-7 items-center justify-center rounded-lg text-grey-300 transition-colors hover:bg-grey-100 hover:text-grey-600"
+										title="Add to list"
+										onclick={() => { v6RowListOpen = v6RowListOpen === i ? null : i; }}
+									>
+										<span class="material-icons-round text-base">playlist_add</span>
+									</button>
+									{#if v6RowListOpen === i}
+										<button class="fixed inset-0 z-30" onclick={() => { v6RowListOpen = null; }} aria-label="Close"></button>
+										<div class="absolute right-0 top-full z-40 mt-1 w-48 rounded-xl border border-grey-200 bg-white p-1.5 shadow-lg">
+											{#each v6Store.lists.filter(l => l.type === 'people') as list}
+												<button
+													class="hover:bg-grey-50 flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-grey-800"
+													onclick={() => { v6RowListOpen = null; toast.show(`${person.name} added to ${list.name}`); }}
+												>
+													<span class="material-icons-round text-grey-400 text-sm">list</span>
+													{list.name}
+												</button>
+											{/each}
+											<div class="my-1 border-t border-grey-100"></div>
+											<button
+												class="hover:bg-grey-50 flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-violet-700"
+												onclick={() => { v6RowListOpen = null; toast.show('New list created'); }}
+											>
+												<span class="material-icons-round text-sm">add</span>
+												Create new list
+											</button>
+										</div>
+									{/if}
+								</div>
 							</td>
 						</tr>
 					{/each}

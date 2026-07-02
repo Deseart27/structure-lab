@@ -1,4 +1,10 @@
 <script lang="ts">
+	import { page } from '$app/stores';
+	import { toast } from '$lib/toast.svelte';
+	import { v6Store } from '$lib/mock/v6.svelte';
+
+	let version = $derived($page.params.version);
+
 	const mcpTools = [
 		{ name: 'Claude', icon: 'smart_toy', desc: 'Use FullEnrich directly in Claude Desktop' },
 		{ name: 'ChatGPT', icon: 'chat', desc: 'Integrate with ChatGPT for AI-powered enrichment' },
@@ -34,6 +40,108 @@
 	];
 </script>
 
+{#if version === 'v6'}
+	<!-- V6: CRM tab content -->
+	<div class="flex h-full flex-col overflow-auto p-8">
+		<h1 class="text-grey-900 mb-6 text-xl font-semibold">CRM</h1>
+
+		<!-- HubSpot Connected Card -->
+		<div class="mb-4 flex items-center justify-between rounded-2xl border border-grey-200 p-5">
+			<div class="flex items-center gap-4">
+				<div class="flex h-11 w-11 items-center justify-center rounded-xl" style="background-color: #ff7a5915;">
+					<span class="material-icons-round text-xl" style="color: #ff7a59;">hub</span>
+				</div>
+				<div>
+					<p class="text-grey-900 text-sm font-semibold">HubSpot — Connected</p>
+					<p class="text-grey-500 text-xs">My Workspace</p>
+				</div>
+			</div>
+			<div class="flex items-center gap-4">
+				<span class="inline-flex h-6 items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 text-xs font-medium text-emerald-700">
+					<span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+					Connected
+				</span>
+				<button
+					class="text-grey-500 hover:text-grey-700 text-xs font-medium"
+					onclick={() => toast.show('CRM switched')}
+				>
+					Switch CRM
+				</button>
+			</div>
+		</div>
+
+		<!-- Info note -->
+		<div class="mb-8 flex items-start gap-3 rounded-xl border border-amber-100 bg-amber-50 p-4">
+			<span class="material-icons-round text-amber-500 text-lg">lightbulb</span>
+			<p class="text-amber-800 text-sm">
+				Automated CRM enrichment rules (filters + scheduling) will be configured here; each run appears as a job in Enrichment.
+			</p>
+		</div>
+
+		<!-- Recent Pushes Table -->
+		<div>
+			<h2 class="text-grey-900 mb-3 text-base font-semibold">Recent Pushes</h2>
+			<div class="overflow-hidden rounded-xl border border-grey-200">
+				<table class="w-full text-sm">
+					<thead>
+						<tr class="border-grey-200 border-b bg-grey-50">
+							<th class="text-grey-500 px-4 py-3 text-left text-xs font-medium">Date</th>
+							<th class="text-grey-500 px-4 py-3 text-left text-xs font-medium">Source</th>
+							<th class="text-grey-500 px-4 py-3 text-left text-xs font-medium">Name</th>
+							<th class="text-grey-500 px-4 py-3 text-right text-xs font-medium">Contacts</th>
+							<th class="text-grey-500 px-4 py-3 text-left text-xs font-medium">Status</th>
+							<th class="text-grey-500 px-4 py-3 text-right text-xs font-medium">Actions</th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each v6Store.pushes as push}
+							<tr class="border-grey-100 hover:bg-grey-50 border-b last:border-b-0 transition-colors">
+								<td class="text-grey-500 px-4 py-3 text-xs">{push.date}</td>
+								<td class="px-4 py-3">
+									{#if push.source === 'Search'}
+										<span class="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">Search</span>
+									{:else if push.source === 'Job'}
+										<span class="inline-flex items-center rounded-full bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-700">Job</span>
+									{:else}
+										<span class="inline-flex items-center rounded-full bg-grey-100 px-2 py-0.5 text-xs font-medium text-grey-700">List</span>
+									{/if}
+								</td>
+								<td class="text-grey-900 px-4 py-3 text-sm font-medium">{push.sourceName}</td>
+								<td class="text-grey-700 px-4 py-3 text-right text-sm">{push.contactsCount}</td>
+								<td class="px-4 py-3">
+									{#if push.status === 'completed'}
+										<span class="inline-flex h-6 items-center rounded-full bg-emerald-50 px-2.5 text-xs font-medium text-emerald-700">Completed</span>
+									{:else if push.status === 'syncing'}
+										<span class="inline-flex h-6 items-center rounded-full bg-amber-50 px-2.5 text-xs font-medium text-amber-700">Syncing</span>
+									{:else}
+										<span class="inline-flex h-6 items-center rounded-full bg-red-50 px-2.5 text-xs font-medium text-red-700">Failed</span>
+									{/if}
+								</td>
+								<td class="px-4 py-3 text-right">
+									<div class="flex items-center justify-end gap-2">
+										<button
+											class="text-grey-600 hover:text-violet-700 text-xs font-medium"
+											onclick={() => toast.show('Enrichment started for push contacts')}
+										>
+											Enrich these contacts
+										</button>
+										<span class="text-grey-300">·</span>
+										<button
+											class="text-grey-600 hover:text-violet-700 text-xs font-medium"
+											onclick={() => toast.show('Contacts saved to list')}
+										>
+											Save to list
+										</button>
+									</div>
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+		</div>
+	</div>
+{:else}
 <div class="flex h-full overflow-auto">
 	<div class="mx-auto mt-[72px] mb-[163px] flex flex-row content-center justify-center gap-[70px] px-8">
 		<!-- Sticky Sidebar -->
@@ -150,3 +258,4 @@
 		</div>
 	</div>
 </div>
+{/if}

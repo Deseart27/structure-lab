@@ -34,9 +34,31 @@
 		},
 	];
 
+	const v6Sections: SectionConfig[] = [
+		{
+			section: 'search',
+			match: '/search',
+			items: [
+				{ label: 'People', href: '/app/search/people', match: '/search/people' },
+				{ label: 'Companies', href: '/app/search/companies', match: '/search/companies' },
+			],
+		},
+		{
+			section: 'integrations',
+			match: '/integrations',
+			items: [
+				{ label: 'CRM', href: '/app/integrations', match: '/integrations' },
+				{ label: 'Engagement', href: '/app/integrations/engagement', match: '/integrations/engagement' },
+				{ label: 'API & MCP', href: '/app/integrations/api', match: '/integrations/api' },
+			],
+		},
+	];
+
 	// V3: same search sub-nav as v2, adds Lists sub-nav (Lists | All Contacts)
 	let sections = $derived<SectionConfig[]>(
-		version === 'v3'
+		version === 'v6'
+			? v6Sections
+			: version === 'v3'
 			? [
 					...baseSections,
 					{
@@ -57,6 +79,10 @@
 		// For "Emails & Phones" (the default enrich), match exactly — not when on /enrich/reverse or /enrich/crm
 		if (item.match === '/enrich') {
 			return route.includes('/enrich') && !route.includes('/enrich/reverse') && !route.includes('/enrich/crm');
+		}
+		// For "CRM" (the default integrations), match only when NOT on /integrations/engagement or /integrations/api
+		if (item.match === '/integrations' && !item.match.includes('/engagement') && !item.match.includes('/api')) {
+			return route.includes('/integrations') && !route.includes('/integrations/engagement') && !route.includes('/integrations/api');
 		}
 		// For "All Contacts" (/prospects), match only exact — not /prospects/lists or /prospects/[id]
 		if (item.match === '/prospects' && !item.match.includes('/lists')) {

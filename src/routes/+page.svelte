@@ -6,6 +6,7 @@
 		{ id: 'v2', name: 'Version 2 — B2B Data Engine', desc: 'Find, Enrich, Push. Search + Enrichment + Lists + Integrations.', entry: 'search' },
 		{ id: 'v3', name: "Version 3 — Lusha's Model", desc: 'All Contacts + Lists. Enriched contacts flow into a global contact database.', entry: 'search' },
 		{ id: 'v4', name: 'Version 4 — Find, Enrich, Push', desc: 'Unified lists, universal Export action, optional list organization. Enrichment from search goes to a list; CSV/manual enrichments are standalone jobs.', entry: 'search' },
+		{ id: 'v6', name: 'Version 6 — Jobs + Parallel Lists', desc: 'Jobs table + parallel Lists. One launcher, universal export, company bundles.', entry: 'search' },
 	];
 </script>
 

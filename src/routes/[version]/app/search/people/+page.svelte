@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { toast } from '$lib/toast.svelte';
+	import { v6Store } from '$lib/mock/v6.svelte';
+	import ExportPopover from '$lib/components/ExportPopover.svelte';
 	let version = $derived($page.params.version);
 
 	let showExportPopover = $state(false);
@@ -22,6 +24,81 @@
 		{ name: 'Henrik Johansson', title: 'CRO', company: 'Klarna', location: 'Stockholm, Sweden', headcount: 5000, industry: 'Financial Technology' },
 		{ name: 'Rachel Lee', title: 'Head of Product', company: 'Canva', location: 'Sydney, Australia', headcount: 4000, industry: 'Design Software' },
 	];
+
+	// --- V6 state ---
+
+	// Mock email/phone generators for inline enrichment
+	function mockEmail(name: string, company: string): string {
+		const parts = name.toLowerCase().split(' ');
+		const domain = company.toLowerCase().replace(/\s+/g, '') + '.com';
+		return `${parts[0]}.${parts[1] ?? parts[0]}@${domain}`;
+	}
+
+	function mockPhone(index: number): string {
+		const suffixes = ['12 34 56 78', '98 76 54 32', '11 22 33 44', '55 44 33 22', '66 55 44 33', '77 88 99 00', '22 33 44 55', '33 44 55 66', '44 55 66 77', '55 66 77 88', '66 77 88 99', '77 99 11 22', '88 11 22 33', '99 22 33 44', '12 99 88 77'];
+		return `+33 6 ${suffixes[index % suffixes.length]}`;
+	}
+
+	let v6Selected = $state(new Set<number>());
+	let v6Enriched = $state(new Set<number>());
+	let v6Enriching = $state(new Set<number>());
+
+	let v6ExportOpen = $state(false);
+	let v6AddToListOpen = $state(false);
+	let v6EnrichModalOpen = $state(false);
+
+	// Batch enrich modal state
+	let v6ModalEmailPro = $state(true);
+	let v6ModalPhone = $state(true);
+	let v6ModalPersonalEmail = $state(false);
+	let v6ModalList = $state('none');
+
+	function v6ToggleAll(checked: boolean) {
+		if (checked) {
+			v6Selected = new Set(people.map((_, i) => i));
+		} else {
+			v6Selected = new Set();
+		}
+	}
+
+	function v6ToggleRow(i: number, checked: boolean) {
+		const next = new Set(v6Selected);
+		if (checked) next.add(i); else next.delete(i);
+		v6Selected = next;
+	}
+
+	function v6EnrichRow(i: number) {
+		if (v6Enriching.has(i) || v6Enriched.has(i)) return;
+		const next = new Set(v6Enriching);
+		next.add(i);
+		v6Enriching = next;
+		setTimeout(() => {
+			const enriching = new Set(v6Enriching);
+			enriching.delete(i);
+			v6Enriching = enriching;
+			const enriched = new Set(v6Enriched);
+			enriched.add(i);
+			v6Enriched = enriched;
+			toast.show('Contact enriched — logged in Enrichment');
+		}, 2500);
+	}
+
+	function v6LaunchBatchEnrich() {
+		const count = v6Selected.size;
+		v6EnrichModalOpen = false;
+		toast.show(`Enrichment started — ${count} contacts`);
+	}
+
+	function v6AddToList(listName: string) {
+		const count = v6Selected.size;
+		v6AddToListOpen = false;
+		toast.show(`${count} added to ${listName}`);
+	}
+
+	$effect(() => {
+		// Close add-to-list popover when selection clears
+		if (v6Selected.size === 0) v6AddToListOpen = false;
+	});
 </script>
 
 <div class="flex h-full flex-col">
@@ -63,6 +140,8 @@
 					<span class="material-icons-round text-sm text-white">auto_awesome</span>
 					Enrich
 				</button>
+			{:else if version === 'v6'}
+				<!-- V6: no persistent header actions — selection-driven action bar below -->
 			{:else}
 				{#if version !== 'v2' && version !== 'v3'}
 					<button class="btn-ghost h-8 gap-1.5 px-3 text-sm" onclick={() => toast.show('Export started — CSV will download shortly')}>
@@ -88,33 +167,260 @@
 		</div>
 	</div>
 
-	<!-- Table -->
-	<div class="bg-grey-50 flex-1 overflow-auto">
-		<table class="w-full min-w-[900px]">
-			<thead class="sticky top-0 z-10">
-				<tr class="table-header">
-					<th class="w-12 px-4 py-3"><input type="checkbox" /></th>
-					<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Name</th>
-					<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Job title</th>
-					<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Company</th>
-					<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Location</th>
-					<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Headcount</th>
-					<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Industry</th>
-				</tr>
-			</thead>
-			<tbody class="bg-white">
-				{#each people as person}
-					<tr class="border-grey-100 hover:bg-grey-50 border-b transition-colors">
-						<td class="px-4 py-3"><input type="checkbox" /></td>
-						<td class="text-grey-900 px-4 py-3 text-sm font-medium">{person.name}</td>
-						<td class="text-grey-700 px-4 py-3 text-sm">{person.title}</td>
-						<td class="text-grey-700 px-4 py-3 text-sm">{person.company}</td>
-						<td class="text-grey-700 px-4 py-3 text-sm">{person.location}</td>
-						<td class="text-grey-700 px-4 py-3 text-sm">{person.headcount.toLocaleString()}</td>
-						<td class="text-grey-700 px-4 py-3 text-sm">{person.industry}</td>
+	{#if version === 'v6'}
+		<!-- V6 search query chip -->
+		<div class="border-grey-100 flex shrink-0 items-center gap-2 border-b px-6 py-2.5">
+			<span class="text-grey-500 text-xs font-semibold uppercase tracking-wider">Search</span>
+			<span class="inline-flex items-center gap-1.5 rounded-full border border-violet-200 bg-violet-50 px-3 py-0.5 text-xs font-medium text-violet-700">
+				<span class="material-icons-round text-xs">search</span>
+				VP Sales · SaaS · France
+				<button class="ml-0.5 text-violet-400 hover:text-violet-700" onclick={() => toast.show('Filter removed')} aria-label="Remove filter">
+					<span class="material-icons-round text-xs">close</span>
+				</button>
+			</span>
+			<span class="text-grey-400 text-xs">{people.length} results</span>
+		</div>
+
+		<!-- V6 selection action bar -->
+		{#if v6Selected.size > 0}
+			<div class="border-grey-100 bg-grey-50 flex shrink-0 items-center gap-2 border-b px-6 py-2">
+				<span class="text-grey-600 mr-1 text-sm font-medium">{v6Selected.size} selected</span>
+				<button
+					class="btn-primary h-8 gap-1 px-3 text-sm"
+					onclick={() => { v6EnrichModalOpen = true; }}
+				>
+					<span class="material-icons-round text-sm text-white">auto_awesome</span>
+					Enrich
+				</button>
+				<!-- Add to list -->
+				<div class="relative">
+					<button
+						class="btn-ghost h-8 gap-1.5 px-3 text-sm"
+						onclick={() => { v6AddToListOpen = !v6AddToListOpen; v6ExportOpen = false; }}
+					>
+						<span class="material-icons-round text-grey-600 text-base">playlist_add</span>
+						Add to list
+						<span class="material-icons-round text-grey-400 text-sm">expand_more</span>
+					</button>
+					{#if v6AddToListOpen}
+						<button class="fixed inset-0 z-30" onclick={() => { v6AddToListOpen = false; }} aria-label="Close"></button>
+						<div class="absolute left-0 top-full z-40 mt-1 w-52 rounded-xl border border-grey-200 bg-white p-1.5 shadow-lg">
+							{#each v6Store.lists.filter(l => l.type === 'people') as list}
+								<button
+									class="hover:bg-grey-50 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-grey-800"
+									onclick={() => v6AddToList(list.name)}
+								>
+									<span class="material-icons-round text-grey-400 text-base">list</span>
+									{list.name}
+								</button>
+							{/each}
+							<div class="my-1 border-t border-grey-100"></div>
+							<button
+								class="hover:bg-grey-50 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-violet-700"
+								onclick={() => { v6AddToListOpen = false; toast.show('New list created'); }}
+							>
+								<span class="material-icons-round text-base">add</span>
+								Create new list
+							</button>
+						</div>
+					{/if}
+				</div>
+				<!-- Export -->
+				<div class="relative">
+					<button
+						class="btn-ghost h-8 gap-1.5 px-3 text-sm"
+						onclick={() => { v6ExportOpen = !v6ExportOpen; v6AddToListOpen = false; }}
+					>
+						<span class="material-icons-round text-grey-600 text-base">download</span>
+						Export
+						<span class="material-icons-round text-grey-400 text-sm">expand_more</span>
+					</button>
+					<ExportPopover bind:open={v6ExportOpen} context="people" count={v6Selected.size} sourceName="VP Sales · SaaS · France" />
+				</div>
+			</div>
+		{/if}
+
+		<!-- V6 Table -->
+		<div class="bg-grey-50 flex-1 overflow-auto">
+			<table class="w-full min-w-[1100px]">
+				<thead class="sticky top-0 z-10">
+					<tr class="table-header">
+						<th class="w-10 px-4 py-3">
+							<input
+								type="checkbox"
+								checked={v6Selected.size === people.length}
+								indeterminate={v6Selected.size > 0 && v6Selected.size < people.length}
+								onchange={(e) => v6ToggleAll((e.target as HTMLInputElement).checked)}
+							/>
+						</th>
+						<th class="w-8 px-2 py-3"></th>
+						<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Name</th>
+						<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Job title</th>
+						<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Company</th>
+						<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Location</th>
+						<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Email</th>
+						<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Phone</th>
+						<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Industry</th>
+						<th class="w-24 px-4 py-3"></th>
 					</tr>
-				{/each}
-			</tbody>
-		</table>
-	</div>
+				</thead>
+				<tbody class="bg-white">
+					{#each people as person, i}
+						<tr class="border-grey-100 hover:bg-grey-50 border-b transition-colors" class:bg-violet-50={v6Selected.has(i)}>
+							<td class="px-4 py-3">
+								<input
+									type="checkbox"
+									checked={v6Selected.has(i)}
+									onchange={(e) => v6ToggleRow(i, (e.target as HTMLInputElement).checked)}
+								/>
+							</td>
+							<!-- LinkedIn icon -->
+							<td class="px-2 py-3">
+								<a
+									href="https://linkedin.com"
+									target="_blank"
+									rel="noopener noreferrer"
+									class="flex items-center justify-center text-[#0A66C2] opacity-70 hover:opacity-100 transition-opacity"
+									onclick={(e) => { e.preventDefault(); toast.show('Opening LinkedIn profile'); }}
+									aria-label="LinkedIn profile"
+								>
+									<svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+										<path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+									</svg>
+								</a>
+							</td>
+							<td class="text-grey-900 px-4 py-3 text-sm font-medium">{person.name}</td>
+							<td class="text-grey-700 px-4 py-3 text-sm">{person.title}</td>
+							<td class="text-grey-700 px-4 py-3 text-sm">{person.company}</td>
+							<td class="text-grey-700 px-4 py-3 text-sm">{person.location}</td>
+							<!-- Email -->
+							<td class="px-4 py-3 text-sm">
+								{#if v6Enriched.has(i)}
+									<span class="text-grey-800">{mockEmail(person.name, person.company)}</span>
+								{:else}
+									<span class="text-grey-300">—</span>
+								{/if}
+							</td>
+							<!-- Phone -->
+							<td class="px-4 py-3 text-sm">
+								{#if v6Enriched.has(i)}
+									<span class="text-grey-800">{mockPhone(i)}</span>
+								{:else}
+									<span class="text-grey-300">—</span>
+								{/if}
+							</td>
+							<td class="text-grey-700 px-4 py-3 text-sm">{person.industry}</td>
+							<!-- Row Enrich button -->
+							<td class="px-4 py-3">
+								{#if v6Enriched.has(i)}
+									<span class="inline-flex items-center gap-1 text-xs text-emerald-600 font-medium">
+										<span class="material-icons-round text-sm">check_circle</span>
+										Enriched
+									</span>
+								{:else if v6Enriching.has(i)}
+									<span class="inline-flex items-center gap-1 text-xs text-grey-400">
+										<svg class="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+											<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+											<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+										</svg>
+										Enriching…
+									</span>
+								{:else}
+									<button
+										class="btn-ghost h-7 gap-1 px-2.5 text-xs"
+										onclick={() => v6EnrichRow(i)}
+									>
+										<span class="material-icons-round text-xs">auto_awesome</span>
+										Enrich
+									</button>
+								{/if}
+							</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		</div>
+
+		<!-- V6 Batch Enrich Modal -->
+		{#if v6EnrichModalOpen}
+			<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+				<div class="w-[440px] rounded-2xl border border-grey-200 bg-white p-6 shadow-xl">
+					<div class="mb-5 flex items-center justify-between">
+						<h3 class="text-grey-900 text-base font-semibold">Enrich {v6Selected.size} contacts</h3>
+						<button class="text-grey-400 hover:text-grey-700" onclick={() => { v6EnrichModalOpen = false; }} aria-label="Close">
+							<span class="material-icons-round">close</span>
+						</button>
+					</div>
+
+					<!-- Enrichment types -->
+					<p class="text-grey-500 mb-2 text-xs font-semibold uppercase tracking-wider">Enrichment type</p>
+					<div class="mb-4 flex flex-col gap-1">
+						<label class="flex cursor-pointer items-center gap-2.5 rounded-lg px-1 py-1.5 text-sm text-grey-800 hover:bg-grey-50">
+							<input type="checkbox" bind:checked={v6ModalEmailPro} class="accent-violet-700" />
+							Professional email
+						</label>
+						<label class="flex cursor-pointer items-center gap-2.5 rounded-lg px-1 py-1.5 text-sm text-grey-800 hover:bg-grey-50">
+							<input type="checkbox" bind:checked={v6ModalPhone} class="accent-violet-700" />
+							Phone
+						</label>
+						<label class="flex cursor-pointer items-center gap-2.5 rounded-lg px-1 py-1.5 text-sm text-grey-800 hover:bg-grey-50">
+							<input type="checkbox" bind:checked={v6ModalPersonalEmail} class="accent-violet-700" />
+							Personal email
+						</label>
+					</div>
+
+					<!-- Add to list (optional) -->
+					<p class="text-grey-500 mb-2 text-xs font-semibold uppercase tracking-wider">Add to a list <span class="font-normal normal-case text-grey-400">(optional)</span></p>
+					<select
+						bind:value={v6ModalList}
+						class="border-grey-200 text-grey-800 mb-6 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
+					>
+						<option value="none">No list</option>
+						<option value="Q3 Targets">Q3 Targets</option>
+						<option value="Sales Leaders DACH">Sales Leaders DACH</option>
+						<option value="new">Create new list…</option>
+					</select>
+
+					<div class="flex items-center justify-end gap-2">
+						<button class="btn-ghost h-9 px-4 text-sm" onclick={() => { v6EnrichModalOpen = false; }}>Cancel</button>
+						<button class="btn-primary h-9 gap-1.5 px-4 text-sm" onclick={v6LaunchBatchEnrich}>
+							<span class="material-icons-round text-sm text-white">auto_awesome</span>
+							Launch enrichment
+						</button>
+					</div>
+				</div>
+			</div>
+		{/if}
+
+	{:else}
+		<!-- Table (non-V6 versions) -->
+		<div class="bg-grey-50 flex-1 overflow-auto">
+			<table class="w-full min-w-[900px]">
+				<thead class="sticky top-0 z-10">
+					<tr class="table-header">
+						<th class="w-12 px-4 py-3"><input type="checkbox" /></th>
+						<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Name</th>
+						<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Job title</th>
+						<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Company</th>
+						<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Location</th>
+						<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Headcount</th>
+						<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Industry</th>
+					</tr>
+				</thead>
+				<tbody class="bg-white">
+					{#each people as person}
+						<tr class="border-grey-100 hover:bg-grey-50 border-b transition-colors">
+							<td class="px-4 py-3"><input type="checkbox" /></td>
+							<td class="text-grey-900 px-4 py-3 text-sm font-medium">{person.name}</td>
+							<td class="text-grey-700 px-4 py-3 text-sm">{person.title}</td>
+							<td class="text-grey-700 px-4 py-3 text-sm">{person.company}</td>
+							<td class="text-grey-700 px-4 py-3 text-sm">{person.location}</td>
+							<td class="text-grey-700 px-4 py-3 text-sm">{person.headcount.toLocaleString()}</td>
+							<td class="text-grey-700 px-4 py-3 text-sm">{person.industry}</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		</div>
+	{/if}
 </div>

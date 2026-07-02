@@ -1,10 +1,132 @@
 <script lang="ts">
 	import { base as svelteBase } from '$app/paths';
 	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
 	import { toast } from '$lib/toast.svelte';
+	import { v6Store } from '$lib/mock/v6.svelte';
+	import type { JobSource, JobStatus } from '$lib/mock/v6.svelte';
 
 	let version = $derived($page.params.version);
 	let base = $derived(`${svelteBase}/${version}`);
+
+	// ── V6 state ────────────────────────────────────────────────────────────
+	let v6SearchQuery = $state('');
+	let v6SearchResults = $derived(
+		v6SearchQuery.length >= 2 ? v6Store.searchContacts(v6SearchQuery) : []
+	);
+	let v6SearchOpen = $derived(v6SearchResults.length > 0);
+
+	// Source / status filters
+	type SourceFilter = 'all' | 'csv' | 'manual' | 'reverse' | 'crm' | 'search';
+	type StatusFilter = 'all' | 'running' | 'completed';
+	let v6SourceFilter = $state<SourceFilter>('all');
+	let v6StatusFilter = $state<StatusFilter>('all');
+
+	let v6FilteredJobs = $derived(v6Store.jobs.filter(job => {
+		const sourceMatch = v6SourceFilter === 'all' || (
+			v6SourceFilter === 'search' ? (job.source === 'search-batch' || job.source === 'search-inline') : job.source === v6SourceFilter
+		);
+		const statusMatch = v6StatusFilter === 'all' || (
+			v6StatusFilter === 'completed' ? (job.status === 'completed' || job.status === 'completed-errors') : job.status === v6StatusFilter
+		);
+		return sourceMatch && statusMatch;
+	}));
+
+	// New enrichment modal
+	let v6ModalOpen = $state(false);
+	let v6ModalStep = $state<1 | 2>(1);
+	let v6ModalMode = $state<'csv' | 'manual' | 'reverse' | 'crm' | 'list' | ''>('');
+	let v6WantProfEmail = $state(true);
+	let v6WantPhone = $state(false);
+	let v6WantPersonalEmail = $state(false);
+
+	// Export / add-to-list popovers per job
+	let v6ExportJobId = $state('');
+	let v6AddListJobId = $state('');
+
+	// Animated job id (pinned running job)
+	let v6AnimatingJobId = $state('');
+
+	const sourceIcons: Record<string, string> = {
+		csv: 'upload_file',
+		manual: 'edit_note',
+		reverse: 'swap_horiz',
+		crm: 'hub',
+		'search-batch': 'search',
+		'search-inline': 'person_search',
+	};
+
+	const sourceLabels: Record<string, string> = {
+		csv: 'CSV',
+		manual: 'Manual',
+		reverse: 'Reverse',
+		crm: 'CRM',
+		'search-batch': 'Search batch',
+		'search-inline': 'Search',
+	};
+
+	function statusBadgeClass(status: JobStatus) {
+		if (status === 'running') return 'bg-amber-50 text-amber-700';
+		if (status === 'queued') return 'bg-grey-100 text-grey-500';
+		if (status === 'completed-errors') return 'bg-orange-50 text-orange-700';
+		return 'bg-emerald-50 text-emerald-700';
+	}
+
+	function statusLabel(status: JobStatus) {
+		if (status === 'running') return 'Running';
+		if (status === 'queued') return 'Queued';
+		if (status === 'completed-errors') return 'Completed with errors';
+		return 'Completed';
+	}
+
+	function v6OpenModal() {
+		v6ModalOpen = true;
+		v6ModalStep = 1;
+		v6ModalMode = '';
+		v6WantProfEmail = true;
+		v6WantPhone = false;
+		v6WantPersonalEmail = false;
+	}
+
+	function v6SelectMode(m: typeof v6ModalMode) {
+		v6ModalMode = m;
+		v6ModalStep = 2;
+	}
+
+	function v6Launch() {
+		v6ModalOpen = false;
+		const newId = `j${Date.now()}`;
+		const sourceMap: Record<string, JobSource> = { csv: 'csv', manual: 'manual', reverse: 'reverse', crm: 'crm', list: 'csv' };
+		v6Store.addJob({
+			id: newId,
+			source: sourceMap[v6ModalMode] ?? 'csv',
+			name: v6ModalMode === 'csv' ? 'New CSV upload' : v6ModalMode === 'manual' ? 'Manual batch' : v6ModalMode === 'reverse' ? 'Reverse lookup' : v6ModalMode === 'crm' ? 'CRM import' : 'From list',
+			contacts: [],
+			progress: 0,
+			status: 'running',
+			date: 'Just now',
+		});
+		v6AnimatingJobId = newId;
+		toast.show('Enrichment started');
+
+		// Animate progress
+		let prog = 0;
+		const interval = setInterval(() => {
+			prog += 5;
+			const job = v6Store.jobs.find(j => j.id === newId);
+			if (!job) { clearInterval(interval); return; }
+			// Mutate via store pattern — update in-place via addJob replacement
+			// Since store exposes reactive array, mutate through a workaround:
+			(job as any).progress = Math.min(prog, 100);
+			if (prog >= 100) {
+				(job as any).status = 'completed';
+				v6AnimatingJobId = '';
+				clearInterval(interval);
+			}
+		}, 500);
+	}
+
+	const v6PeopleLists = $derived(v6Store.lists.filter(l => l.type === 'people'));
 
 	let mode: '' | 'csv' | 'manual' | 'list' = $state('');
 	let wantPhone = $state(true);
@@ -40,6 +162,382 @@
 	];
 </script>
 
+{#if version === 'v6'}
+<!-- ═══════════════════════════════════════════════════════════════════
+     V6 Enrichment — Jobs table
+═══════════════════════════════════════════════════════════════════ -->
+<div class="flex h-full flex-col overflow-auto">
+	<div class="flex justify-center pt-14 pb-20">
+		<div class="mx-8 w-full max-w-[1100px]">
+
+			<!-- Header row -->
+			<div class="flex items-center justify-between gap-4 pb-5">
+				<h1 class="text-grey-900 text-2xl font-semibold shrink-0">Enrichment</h1>
+
+				<!-- Global search -->
+				<div class="relative flex-1 max-w-md">
+					<span class="material-icons-round text-grey-400 pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base">search</span>
+					<input
+						class="input h-9 w-full pl-9 text-sm"
+						placeholder="Search a contact across all results..."
+						bind:value={v6SearchQuery}
+					/>
+					{#if v6SearchOpen}
+						<!-- Backdrop -->
+						<button class="fixed inset-0 z-20" onclick={() => { v6SearchQuery = ''; }} aria-label="Close search"></button>
+						<div class="absolute left-0 top-full z-30 mt-1 w-[480px] rounded-xl border border-grey-200 bg-white shadow-lg overflow-hidden">
+							{#each v6SearchResults as result}
+								<button
+									class="hover:bg-grey-50 flex w-full items-start gap-3 px-4 py-3 text-left transition-colors border-b border-grey-100 last:border-0"
+									onclick={() => {
+										v6SearchQuery = '';
+										goto(`${base}/app/enrich/${result.provenances.find(p => p.type !== 'List')?.id ?? result.provenances[0]?.id ?? 'j1'}`);
+									}}
+								>
+									<div class="flex-1 min-w-0">
+										<p class="text-grey-900 text-sm font-medium">{result.contact.firstName} {result.contact.lastName}</p>
+										<p class="text-grey-500 text-xs">{result.contact.title} · {result.contact.company}</p>
+										{#if result.contact.email}
+											<p class="text-grey-400 font-mono text-xs mt-0.5">{result.contact.email}</p>
+										{/if}
+									</div>
+									<div class="flex flex-wrap gap-1 shrink-0 max-w-[200px] justify-end">
+										{#each result.provenances.slice(0, 3) as prov}
+											<span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium
+												{prov.type === 'CSV' ? 'bg-violet-50 text-violet-700' :
+												 prov.type === 'Search' ? 'bg-blue-50 text-blue-700' :
+												 prov.type === 'Reverse' ? 'bg-teal-50 text-teal-700' :
+												 prov.type === 'CRM' ? 'bg-orange-50 text-orange-700' :
+												 prov.type === 'List' ? 'bg-emerald-50 text-emerald-700' :
+												 'bg-grey-100 text-grey-600'}">
+												{prov.name.length > 20 ? prov.name.slice(0, 20) + '…' : prov.name}
+											</span>
+										{/each}
+									</div>
+								</button>
+							{/each}
+						</div>
+					{/if}
+				</div>
+
+				<button class="btn-primary h-9 gap-2 px-4 text-sm font-semibold shrink-0" onclick={v6OpenModal}>
+					<span class="material-icons-round text-sm text-white">add</span>
+					New enrichment
+				</button>
+			</div>
+
+			<!-- Filters row -->
+			<div class="flex items-center gap-6 pb-5">
+				<!-- Source filters -->
+				<div class="flex items-center gap-1">
+					{#each [['all', 'All'], ['csv', 'CSV'], ['manual', 'Manual'], ['reverse', 'Reverse'], ['crm', 'CRM'], ['search', 'Search']] as [val, label]}
+						<button
+							class="h-7 rounded-full px-3 text-xs font-medium transition-colors
+								{v6SourceFilter === val ? 'bg-grey-900 text-white' : 'text-grey-600 hover:bg-grey-100'}"
+							onclick={() => { v6SourceFilter = val as typeof v6SourceFilter; }}
+						>{label}</button>
+					{/each}
+				</div>
+				<div class="h-4 w-px bg-grey-200"></div>
+				<!-- Status filters -->
+				<div class="flex items-center gap-1">
+					{#each [['all', 'All'], ['running', 'Running'], ['completed', 'Completed']] as [val, label]}
+						<button
+							class="h-7 rounded-full px-3 text-xs font-medium transition-colors
+								{v6StatusFilter === val ? 'bg-grey-900 text-white' : 'text-grey-600 hover:bg-grey-100'}"
+							onclick={() => { v6StatusFilter = val as typeof v6StatusFilter; }}
+						>{label}</button>
+					{/each}
+				</div>
+			</div>
+
+			<!-- Pinned running job banner -->
+			{#if v6AnimatingJobId}
+				{@const pinnedJob = v6Store.jobs.find(j => j.id === v6AnimatingJobId)}
+				{#if pinnedJob && pinnedJob.status === 'running'}
+					<div class="mb-4 flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+						<span class="material-icons-round text-amber-500 text-lg animate-spin" style="animation-duration:1.5s">sync</span>
+						<p class="text-amber-800 text-sm font-medium flex-1">Enrichment runs in the background — you can safely leave this page.</p>
+						<span class="text-amber-700 text-sm font-semibold">{pinnedJob.progress}%</span>
+					</div>
+				{/if}
+			{/if}
+
+			<!-- Jobs table -->
+			<div class="list-shell overflow-hidden">
+				<!-- Table header -->
+				<div class="table-header grid grid-cols-[180px_1fr_90px_160px_140px_110px_auto] items-center gap-3 px-5 py-2.5">
+					<span class="text-grey-600 text-xs font-semibold uppercase tracking-wider">Source</span>
+					<span class="text-grey-600 text-xs font-semibold uppercase tracking-wider">Name</span>
+					<span class="text-grey-600 text-xs font-semibold uppercase tracking-wider">Contacts</span>
+					<span class="text-grey-600 text-xs font-semibold uppercase tracking-wider">Progress</span>
+					<span class="text-grey-600 text-xs font-semibold uppercase tracking-wider">Status</span>
+					<span class="text-grey-600 text-xs font-semibold uppercase tracking-wider">Date</span>
+					<span class="text-grey-600 text-xs font-semibold uppercase tracking-wider">Actions</span>
+				</div>
+
+				{#each v6FilteredJobs as job, i}
+					<div
+						class="grid grid-cols-[180px_1fr_90px_160px_140px_110px_auto] items-center gap-3 px-5 py-4 transition-colors
+							{i < v6FilteredJobs.length - 1 ? 'border-b border-grey-100' : ''}
+							{job.id === v6AnimatingJobId ? 'bg-amber-50/40' : 'hover:bg-grey-50'}"
+					>
+						<!-- Source -->
+						<div class="flex items-center gap-2">
+							<div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-50">
+								<span class="material-icons-round text-violet-600 text-base">{sourceIcons[job.source] ?? 'work'}</span>
+							</div>
+							<span class="text-grey-700 text-sm">{sourceLabels[job.source] ?? job.source}</span>
+						</div>
+
+						<!-- Name -->
+						<a href="{base}/app/enrich/{job.id}" class="text-grey-900 text-sm font-medium hover:text-violet-700 truncate transition-colors">
+							{job.name}
+						</a>
+
+						<!-- Contacts -->
+						<span class="text-grey-700 text-sm">{job.contacts.length}</span>
+
+						<!-- Progress -->
+						<div class="flex items-center gap-2">
+							<div class="bg-grey-200 h-1.5 flex-1 max-w-[100px] overflow-hidden rounded-full">
+								<div
+									class="h-full rounded-full transition-all
+										{job.status === 'running' ? 'bg-amber-400' : job.status === 'queued' ? 'bg-grey-400' : job.status === 'completed-errors' ? 'bg-orange-400' : 'bg-emerald-500'}"
+									style:width="{job.progress}%"
+								></div>
+							</div>
+							<span class="text-grey-500 text-xs w-8 shrink-0">{job.progress}%</span>
+						</div>
+
+						<!-- Status -->
+						<span class="inline-flex h-6 items-center rounded-full px-2.5 text-xs font-medium {statusBadgeClass(job.status)}">
+							{statusLabel(job.status)}
+						</span>
+
+						<!-- Date -->
+						<span class="text-grey-400 text-xs">{job.date}</span>
+
+						<!-- Actions -->
+						<div class="flex items-center gap-1">
+							<!-- Export -->
+							<div class="relative">
+								<button
+									class="btn-ghost flex h-7 items-center gap-1 px-2 text-xs"
+									onclick={() => { v6ExportJobId = v6ExportJobId === job.id ? '' : job.id; v6AddListJobId = ''; }}
+								>
+									<span class="material-icons-round text-grey-500 text-sm">download</span>
+									Export
+									<span class="material-icons-round text-grey-400 text-xs">expand_more</span>
+								</button>
+								{#if v6ExportJobId === job.id}
+									<button class="fixed inset-0 z-30" onclick={() => { v6ExportJobId = ''; }} aria-label="Close export"></button>
+									<div class="absolute right-0 top-full z-40 mt-1 w-72 rounded-xl border border-grey-200 bg-white p-3 shadow-lg">
+										<div class="mb-3 border-b border-grey-100 pb-3 flex flex-col gap-0.5">
+											<button class="hover:bg-grey-50 flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-grey-800"
+												onclick={() => { v6ExportJobId = ''; toast.show(`Pushing ${job.contacts.length} contacts to HubSpot — contacts will be created or updated. Trace available in Integrations > CRM.`); }}>
+												<span class="material-icons-round text-base" style="color: #ff7a59;">hub</span>
+												Push to HubSpot
+											</button>
+											<button class="hover:bg-grey-50 flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-grey-800"
+												onclick={() => { v6ExportJobId = ''; toast.show('CSV export started — download will begin shortly.'); }}>
+												<span class="material-icons-round text-grey-500 text-base">description</span>
+												Export CSV
+											</button>
+											<button class="hover:bg-grey-50 flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-grey-800"
+												onclick={() => { v6ExportJobId = ''; toast.show('Pushed to Lemlist'); }}>
+												<span class="material-icons-round text-grey-500 text-base">campaign</span>
+												Push to engagement tool
+											</button>
+										</div>
+									</div>
+								{/if}
+							</div>
+
+							<!-- Add to list -->
+							<div class="relative">
+								<button
+									class="btn-ghost flex h-7 items-center gap-1 px-2 text-xs"
+									onclick={() => { v6AddListJobId = v6AddListJobId === job.id ? '' : job.id; v6ExportJobId = ''; }}
+								>
+									<span class="material-icons-round text-grey-500 text-sm">playlist_add</span>
+									Add to list
+								</button>
+								{#if v6AddListJobId === job.id}
+									<button class="fixed inset-0 z-20" onclick={() => { v6AddListJobId = ''; }} aria-label="Close"></button>
+									<div class="absolute right-0 top-full z-30 mt-1 w-52 rounded-xl border border-grey-200 bg-white p-1.5 shadow-lg">
+										{#each v6PeopleLists as list}
+											<button
+												class="hover:bg-grey-50 flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-grey-800"
+												onclick={() => { v6AddListJobId = ''; toast.show('8 added, 2 duplicates skipped'); }}
+											>
+												<span class="material-icons-round text-grey-400 text-base">folder</span>
+												{list.name}
+											</button>
+										{/each}
+									</div>
+								{/if}
+							</div>
+
+							<!-- Detail link -->
+							<a href="{base}/app/enrich/{job.id}" class="btn-ghost flex h-7 w-7 items-center justify-center p-0" title="Open detail">
+								<span class="material-icons-round text-grey-400 text-base">chevron_right</span>
+							</a>
+						</div>
+					</div>
+				{/each}
+
+				{#if v6FilteredJobs.length === 0}
+					<div class="flex flex-col items-center justify-center gap-2 py-16">
+						<span class="material-icons-round text-grey-300 text-4xl">inbox</span>
+						<p class="text-grey-500 text-sm">No enrichment jobs match these filters.</p>
+					</div>
+				{/if}
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- ── New enrichment modal ─────────────────────────────────────────── -->
+{#if v6ModalOpen}
+	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+		<div class="relative w-full max-w-2xl rounded-2xl bg-white shadow-2xl overflow-hidden">
+			<!-- Modal header -->
+			<div class="flex items-center justify-between border-b border-grey-100 px-6 py-4">
+				<div class="flex items-center gap-3">
+					{#if v6ModalStep === 2}
+						<button class="btn-ghost flex h-8 w-8 items-center justify-center rounded-lg p-0" onclick={() => { v6ModalStep = 1; v6ModalMode = ''; }}>
+							<span class="material-icons-round text-grey-600 text-lg">arrow_back</span>
+						</button>
+					{/if}
+					<h2 class="text-grey-900 text-lg font-semibold">
+						{v6ModalStep === 1 ? 'New enrichment' : 'Configure enrichment'}
+					</h2>
+					{#if v6ModalStep === 2}
+						<span class="text-grey-400 text-sm">Step 2 of 2</span>
+					{/if}
+				</div>
+				<button class="btn-ghost flex h-8 w-8 items-center justify-center rounded-lg p-0" onclick={() => { v6ModalOpen = false; }}>
+					<span class="material-icons-round text-grey-500 text-lg">close</span>
+				</button>
+			</div>
+
+			<div class="p-6">
+				{#if v6ModalStep === 1}
+					<!-- Step 1: What do you have? -->
+					<p class="text-grey-600 mb-5 text-sm">What do you have?</p>
+					<div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+						{#each [
+							{ mode: 'csv', icon: 'upload_file', label: 'Upload a CSV', sub: 'up to 64,000 contacts' },
+							{ mode: 'manual', icon: 'edit_note', label: 'Add manually', sub: 'name + company or LinkedIn URL' },
+							{ mode: 'reverse', icon: 'swap_horiz', label: 'Emails to reverse', sub: 'paste emails, get full profiles', badge: 'New' },
+							{ mode: 'crm', icon: 'hub', label: 'From my CRM', sub: 'enrich HubSpot lists' },
+							{ mode: 'list', icon: 'format_list_bulleted', label: 'From a list', sub: 'enrich an existing FullEnrich list' },
+						] as opt}
+							<button
+								class="border-grey-200 hover:border-violet-300 hover:bg-violet-50/40 relative flex flex-col items-center gap-2.5 rounded-xl border bg-white p-5 text-center shadow-sm transition-all"
+								onclick={() => v6SelectMode(opt.mode as typeof v6ModalMode)}
+							>
+								{#if opt.badge}
+									<span class="absolute top-2.5 right-2.5 rounded-full bg-violet-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">{opt.badge}</span>
+								{/if}
+								<span class="material-icons-round text-violet-700 text-3xl">{opt.icon}</span>
+								<span class="text-grey-900 text-sm font-semibold">{opt.label}</span>
+								<span class="text-grey-500 text-xs">{opt.sub}</span>
+							</button>
+						{/each}
+					</div>
+
+				{:else}
+					<!-- Step 2: Enrichment types + mode-specific input -->
+					<!-- Enrichment type checkboxes -->
+					<p class="text-grey-600 mb-3 text-sm font-medium">What to find?</p>
+					<div class="mb-5 flex gap-3">
+						<label class="flex h-11 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border text-sm font-medium transition-all {v6WantProfEmail ? 'border-violet-300 bg-violet-50 text-violet-800 shadow-sm' : 'border-grey-200 text-grey-600 hover:border-grey-300'}">
+							<input type="checkbox" class="sr-only" bind:checked={v6WantProfEmail} />
+							<span class="material-icons-round text-base">email</span>
+							Professional email
+						</label>
+						<label class="flex h-11 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border text-sm font-medium transition-all {v6WantPhone ? 'border-violet-300 bg-violet-50 text-violet-800 shadow-sm' : 'border-grey-200 text-grey-600 hover:border-grey-300'}">
+							<input type="checkbox" class="sr-only" bind:checked={v6WantPhone} />
+							<span class="material-icons-round text-base">phone</span>
+							Phone
+						</label>
+						<label class="flex h-11 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border text-sm font-medium transition-all {v6WantPersonalEmail ? 'border-pink-300 bg-pink-50 text-pink-800 shadow-sm' : 'border-grey-200 text-grey-600 hover:border-grey-300'}">
+							<input type="checkbox" class="sr-only" bind:checked={v6WantPersonalEmail} />
+							<span class="material-icons-round text-base">person</span>
+							Personal email
+						</label>
+					</div>
+
+					<!-- Mode-specific input placeholder -->
+					<p class="text-grey-600 mb-3 text-sm font-medium">
+						{v6ModalMode === 'csv' ? 'Upload your file' : v6ModalMode === 'manual' ? 'Enter contacts' : v6ModalMode === 'reverse' ? 'Paste emails' : v6ModalMode === 'crm' ? 'Select HubSpot list' : 'Select list'}
+					</p>
+					{#if v6ModalMode === 'csv'}
+						<div class="border-grey-300 flex flex-col items-center justify-center rounded-xl border-2 border-dashed px-8 py-12 transition-colors hover:border-violet-300 hover:bg-violet-50/20">
+							<span class="material-icons-round text-grey-400 text-4xl">cloud_upload</span>
+							<p class="text-grey-700 mt-3 font-medium text-sm">Drop your CSV or Excel file here</p>
+							<p class="text-grey-500 mt-1 text-xs">Supports .csv, .xlsx — up to 64,000 contacts</p>
+							<button class="btn-primary mt-4 h-9 px-4 text-sm">Select File</button>
+						</div>
+					{:else if v6ModalMode === 'manual'}
+						<div class="flex flex-col gap-2">
+							{#each [1, 2] as _}
+								<div class="border-grey-200 flex gap-2 rounded-lg border p-2.5">
+									<input class="input h-8 flex-1 text-sm" placeholder="First name" />
+									<input class="input h-8 flex-1 text-sm" placeholder="Last name" />
+									<input class="input h-8 flex-1 text-sm" placeholder="Company" />
+									<input class="input h-8 flex-1 text-sm" placeholder="LinkedIn URL" />
+								</div>
+							{/each}
+							<button class="btn-ghost flex h-8 items-center gap-1 self-start text-sm">
+								<span class="material-icons-round text-base">add</span>
+								Add row
+							</button>
+						</div>
+					{:else if v6ModalMode === 'reverse'}
+						<textarea
+							class="input h-28 w-full resize-none text-sm font-mono"
+							placeholder="sarah@stripe.com&#10;james@hubspot.com&#10;emma@datadog.com"
+						></textarea>
+					{:else if v6ModalMode === 'crm'}
+						<div class="flex flex-col gap-2">
+							{#each ['Newsletter signups', 'Cold leads 2025', 'Trial users May'] as listName}
+								<label class="flex cursor-pointer items-center gap-3 rounded-xl border border-grey-200 px-4 py-3 hover:border-violet-300 hover:bg-violet-50/30 transition-colors">
+									<input type="radio" name="crm-list" class="accent-violet-700" />
+									<span class="text-grey-900 text-sm">{listName}</span>
+								</label>
+							{/each}
+						</div>
+					{:else}
+						<div class="flex flex-col gap-2">
+							{#each v6PeopleLists as list}
+								<label class="flex cursor-pointer items-center gap-3 rounded-xl border border-grey-200 px-4 py-3 hover:border-violet-300 hover:bg-violet-50/30 transition-colors">
+									<input type="radio" name="from-list" class="accent-violet-700" />
+									<span class="text-grey-900 text-sm">{list.name}</span>
+									<span class="text-grey-400 text-xs ml-auto">{list.memberIds.length} contacts</span>
+								</label>
+							{/each}
+						</div>
+					{/if}
+
+					<!-- Launch -->
+					<div class="mt-5 flex justify-end">
+						<button class="btn-primary h-10 gap-2 px-5 text-sm font-semibold" onclick={v6Launch}>
+							<span class="material-icons-round text-sm text-white">auto_awesome</span>
+							Launch enrichment
+						</button>
+					</div>
+				{/if}
+			</div>
+		</div>
+	</div>
+{/if}
+{:else}
+<!-- ═══════════════════════════════════════════════════════════════════
+     V1–V5 existing enrichment page
+═══════════════════════════════════════════════════════════════════ -->
 <div class="flex h-full flex-col overflow-auto">
 	<div class="flex justify-center pt-20">
 		<div class="mx-8 w-full max-w-[1050px]">
@@ -349,3 +847,4 @@
 		</div>
 	</div>
 </div>
+{/if}

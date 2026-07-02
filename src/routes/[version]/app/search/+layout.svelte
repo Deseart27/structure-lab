@@ -20,14 +20,14 @@
 <section class="page m-2 flex rounded-3xl">
 	<main
 		class="grid w-full grid-cols-[340px_1fr] grid-rows-[1fr] overflow-hidden rounded-2xl"
-		class:h-[calc(100vh-72px-16px)]={version !== 'v2' && version !== 'v3'}
-		class:h-[calc(100vh-72px-40px-16px)]={version === 'v2' || version === 'v3'}
+		class:h-[calc(100vh-72px-16px)]={version !== 'v2' && version !== 'v3' && version !== 'v6'}
+		class:h-[calc(100vh-72px-40px-16px)]={version === 'v2' || version === 'v3' || version === 'v6'}
 	>
 		<!-- Sidebar -->
 		<aside
 			class="border-grey-200 flex min-h-0 flex-col overflow-hidden rounded-l-2xl border bg-white text-sm"
 		>
-			{#if version !== 'v2' && version !== 'v3'}
+			{#if version !== 'v2' && version !== 'v3' && version !== 'v6'}
 				<div role="tablist" aria-label="Search type" class="tablist flex shrink-0">
 					<button
 						class="tab"
@@ -47,7 +47,7 @@
 					>
 						Companies
 					</button>
-					{#if version !== 'v4'}
+					{#if version !== 'v4' && version !== 'v6'}
 						<button
 							class="tab"
 							class:is-selected={currentTab === 'lists'}
@@ -61,7 +61,7 @@
 				</div>
 			{/if}
 
-			{#if currentTab !== 'lists' || version === 'v2' || version === 'v3' || version === 'v4'}
+			{#if currentTab !== 'lists' || version === 'v2' || version === 'v3' || version === 'v4' || version === 'v6'}
 				<!-- Filters sidebar -->
 				<div class="min-h-0 flex-1 overflow-auto">
 					<div class="p-4">

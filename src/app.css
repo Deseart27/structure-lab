@@ -222,3 +222,29 @@ button {
 	scrollbar-width: thin;
 	scrollbar-color: var(--color-grey-500) transparent;
 }
+
+/* Production-style list shell */
+@utility list-shell {
+	border-radius: 12px;
+	border: 1px solid var(--color-grey-200);
+	overflow: hidden;
+	box-shadow:
+		0px 1px 3px 0px rgba(57, 47, 60, 0.06),
+		0px 1px 2px -1px rgba(57, 47, 60, 0.06);
+}
+
+/* Production-style table header */
+@utility table-header {
+	background-color: var(--color-grey-50);
+	height: 40px;
+	box-shadow: 0px 1px 0px 0px var(--color-grey-200);
+}
+
+/* Fade-in animation */
+@keyframes fade-in {
+	from { opacity: 0; transform: translateY(8px); }
+	to { opacity: 1; transform: translateY(0); }
+}
+@utility animate-fade-in {
+	animation: fade-in 0.2s ease-out;
+}

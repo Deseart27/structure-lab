@@ -2,9 +2,39 @@
 	import { base as svelteBase } from '$app/paths';
 	import { page } from '$app/stores';
 	import { toast } from '$lib/toast.svelte';
+	import { v6Store } from '$lib/mock/v6.svelte';
+	import ExportPopover from '$lib/components/ExportPopover.svelte';
 
 	let base = $derived(`${svelteBase}/${$page.params.version}`);
+	let version = $derived($page.params.version);
 	let listId = $derived($page.params.listId);
+
+	// V6 derived state
+	let v6List = $derived(v6Store.getList(listId));
+	let v6Contacts = $derived(v6List && v6List.type === 'people' ? v6Store.getContactsForList(v6List) : []);
+	let v6Companies = $derived(
+		v6List && v6List.type === 'company'
+			? v6List.memberIds.map(id => v6Store.companies.find(c => c.id === id)).filter(Boolean)
+			: []
+	);
+	let v6ExportOpen = $state(false);
+
+	const emailStatusStyles: Record<string, { label: string; color: string }> = {
+		valid:          { label: 'Valid',         color: 'text-emerald-700 bg-emerald-50' },
+		'catch-all':    { label: 'Catch-all',     color: 'text-amber-700 bg-amber-50' },
+		'invalid-found':{ label: 'Invalid',       color: 'text-red-700 bg-red-50' },
+		'not-found':    { label: 'Not found',     color: 'text-grey-500 bg-grey-100' },
+		pending:        { label: 'Pending',        color: 'text-grey-500 bg-grey-100' },
+	};
+
+	function v6GetJobProvenance(contactId: string): { name: string; id: string } | null {
+		for (const job of v6Store.jobs) {
+			if (job.contacts.some(c => c.id === contactId)) {
+				return { name: job.name, id: job.id };
+			}
+		}
+		return null;
+	}
 
 	const listsData: Record<string, string> = {
 		'1': 'SaaS Founders Q1',
@@ -57,6 +87,179 @@
 	}
 </script>
 
+{#if version === 'v6' && v6List}
+<!-- V6 List Detail -->
+<div class="flex h-full flex-col">
+	<!-- Header -->
+	<div class="border-grey-200 flex h-14 shrink-0 items-center justify-between border-b px-6">
+		<div class="flex items-center gap-3">
+			<a href="{base}/app/prospects" class="btn-ghost flex h-8 w-8 items-center justify-center rounded-lg p-0">
+				<span class="material-icons-round text-grey-600 text-lg">arrow_back</span>
+			</a>
+			<h1 class="text-grey-900 text-base font-semibold">{v6List.name}</h1>
+			{#if v6List.type === 'people'}
+				<span class="inline-flex items-center rounded-full bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-700">People</span>
+				<span class="text-grey-500 text-sm">{v6Contacts.length} contacts</span>
+			{:else}
+				<span class="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">Company</span>
+				<span class="text-grey-500 text-sm">{v6Companies.length} companies</span>
+			{/if}
+		</div>
+		<div class="flex items-center gap-2">
+			{#if v6List.type === 'people'}
+				<button
+					class="btn-ghost h-8 gap-1.5 px-3 text-sm"
+					onclick={() => toast.show(`Enrichment started for "${v6List.name}" — results will flow back into the list`)}
+				>
+					<span class="material-icons-round text-grey-600 text-base">auto_awesome</span>
+					Enrich
+				</button>
+			{/if}
+			<div class="relative">
+				<button class="btn-ghost h-8 gap-1.5 px-3 text-sm" onclick={() => { v6ExportOpen = !v6ExportOpen; }}>
+					<span class="material-icons-round text-grey-600 text-base">download</span>
+					Export
+					<span class="material-icons-round text-grey-400 text-sm">expand_more</span>
+				</button>
+				<ExportPopover
+					bind:open={v6ExportOpen}
+					context={v6List.type === 'people' ? 'people' : 'companies'}
+					count={v6List.memberIds.length}
+					sourceName={v6List.name}
+				/>
+			</div>
+			<button class="btn-ghost h-8 gap-1.5 px-3 text-sm" onclick={() => toast.show('Add contacts — coming soon')}>
+				<span class="material-icons-round text-grey-600 text-base">person_add</span>
+				Add contacts
+			</button>
+		</div>
+	</div>
+
+	<!-- Content -->
+	<div class="flex-1 overflow-auto">
+		{#if v6List.type === 'people'}
+			<!-- People list table -->
+			<table class="w-full min-w-[1000px]">
+				<thead class="sticky top-0 z-10">
+					<tr class="table-header">
+						<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Name</th>
+						<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Company</th>
+						<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Title</th>
+						<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Email</th>
+						<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Phone</th>
+						<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Email status</th>
+						<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">In job</th>
+						<th class="w-12 px-4 py-3"></th>
+					</tr>
+				</thead>
+				<tbody class="bg-white">
+					{#each v6Contacts as contact}
+						{@const job = v6GetJobProvenance(contact.id)}
+						<tr class="border-grey-100 hover:bg-grey-50 border-b transition-colors">
+							<td class="px-4 py-3">
+								<p class="text-grey-900 text-sm font-medium">{contact.firstName} {contact.lastName}</p>
+							</td>
+							<td class="text-grey-700 px-4 py-3 text-sm">{contact.company}</td>
+							<td class="text-grey-600 px-4 py-3 text-sm">{contact.title}</td>
+							<td class="px-4 py-3">
+								{#if contact.email}
+									<span class="text-grey-900 font-mono text-xs">{contact.email}</span>
+								{:else}
+									<span class="text-grey-300 text-xs">—</span>
+								{/if}
+							</td>
+							<td class="px-4 py-3">
+								{#if contact.phone}
+									<span class="text-grey-900 font-mono text-xs">{contact.phone}</span>
+								{:else}
+									<span class="text-grey-300 text-xs">—</span>
+								{/if}
+							</td>
+							<td class="px-4 py-3">
+								{#if emailStatusStyles[contact.emailStatus]}
+									<span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium {emailStatusStyles[contact.emailStatus].color}">
+										{emailStatusStyles[contact.emailStatus].label}
+									</span>
+								{:else}
+									<span class="text-grey-300 text-xs">—</span>
+								{/if}
+							</td>
+							<td class="px-4 py-3">
+								{#if job}
+									<span class="inline-flex items-center gap-1 rounded-full bg-grey-100 px-2 py-0.5 text-xs font-medium text-grey-600" title={job.name}>
+										<span class="material-icons-round text-xs">work_outline</span>
+										{job.name.length > 20 ? job.name.slice(0, 20) + '…' : job.name}
+									</span>
+								{:else}
+									<span class="text-grey-300 text-xs">—</span>
+								{/if}
+							</td>
+							<td class="px-4 py-3 text-right">
+								<button
+									class="btn-ghost h-7 w-7 p-0"
+									title="Remove from list"
+									onclick={() => toast.show(`${contact.firstName} ${contact.lastName} removed from list`)}
+								>
+									<span class="material-icons-round text-grey-400 text-base">close</span>
+								</button>
+							</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		{:else}
+			<!-- Company list table -->
+			<table class="w-full min-w-[800px]">
+				<thead class="sticky top-0 z-10">
+					<tr class="table-header">
+						<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Company</th>
+						<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Industry</th>
+						<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Headcount</th>
+						<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Location</th>
+						<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Funding</th>
+					</tr>
+				</thead>
+				<tbody class="bg-white">
+					{#each v6Companies as company}
+						{#if company}
+							<tr class="border-grey-100 hover:bg-grey-50 border-b transition-colors">
+								<td class="px-4 py-3">
+									<a
+										href="{base}/app/search/companies/{company.id}"
+										class="text-grey-900 text-sm font-medium hover:text-violet-700"
+									>{company.name}</a>
+								</td>
+								<td class="text-grey-700 px-4 py-3 text-sm">{company.industry}</td>
+								<td class="text-grey-700 px-4 py-3 text-sm">{company.headcount.toLocaleString()}</td>
+								<td class="text-grey-700 px-4 py-3 text-sm">{company.location}</td>
+								<td class="px-4 py-3">
+									{#if company.fundingUnlocked && company.funding}
+										<span class="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
+											{company.funding.round} · ${company.funding.amount}
+										</span>
+									{:else}
+										<span class="inline-flex items-center gap-1 rounded-full bg-grey-100 px-2 py-0.5 text-xs font-medium text-grey-500">
+											<span class="material-icons-round text-xs">lock</span>
+											Locked
+										</span>
+									{/if}
+								</td>
+							</tr>
+						{/if}
+					{/each}
+				</tbody>
+			</table>
+		{/if}
+	</div>
+</div>
+
+{:else if version === 'v6' && !v6List}
+<div class="flex h-full items-center justify-center">
+	<p class="text-grey-400 text-sm">List not found.</p>
+</div>
+
+{:else}
+<!-- Default: V1–V5 list detail -->
 <div class="flex h-full flex-col">
 	<!-- Header with back nav -->
 	<div class="border-grey-200 flex h-14 shrink-0 items-center justify-between border-b px-6">
@@ -93,8 +296,8 @@
 	<!-- Table -->
 	<div class="flex-1 overflow-auto">
 		<table class="w-full min-w-[1100px]">
-			<thead class="bg-grey-50 sticky top-0 z-10">
-				<tr class="border-grey-200 border-b">
+			<thead class="sticky top-0 z-10">
+				<tr class="table-header">
 					<th class="w-12 px-4 py-3">
 						<input type="checkbox" checked={selectedContacts.size === contacts.length} onchange={toggleAll} />
 					</th>
@@ -171,3 +374,4 @@
 		</table>
 	</div>
 </div>
+{/if}

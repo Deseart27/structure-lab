@@ -7,7 +7,7 @@
 	let base = $derived(`${svelteBase}/${$page.params.version}`);
 </script>
 
-<div class="border-grey-200 flex h-16 w-full min-w-0 items-center justify-between gap-4 border-b bg-white px-6">
+<div class="border-grey-200 flex h-16 w-full min-w-0 items-center justify-between gap-4 border-b bg-white px-6" style="box-shadow: 0px 1px 2px 0px rgba(57, 47, 60, 0.04);">
 	<div class="flex min-w-0 flex-1 items-center gap-4 lg:gap-8">
 		<a href="{base}/app/search" class="shrink-0">
 			<Logo height={32} width={32} />
@@ -17,8 +17,8 @@
 
 	<div class="flex shrink-0 items-center gap-4 lg:gap-12">
 		<!-- Credit chip -->
-		<button class="text-grey-900 flex h-8 items-center rounded-3xl border border-amber-200 bg-amber-50 py-1 pr-3 pl-2">
-			<span class="material-icons-round text-base mr-2 text-amber-500">stars</span>
+		<button class="text-grey-900 flex h-8 items-center rounded-3xl border border-amber-200 bg-amber-50 py-1 pr-3 pl-2 text-sm font-medium">
+			<span class="material-icons-round mr-1.5 text-base text-amber-500">stars</span>
 			<span class="whitespace-nowrap">1,250 Credits</span>
 		</button>
 

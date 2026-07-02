@@ -3,9 +3,25 @@
 	import { page } from '$app/stores';
 	import { toast } from '$lib/toast.svelte';
 	let base = $derived(`${svelteBase}/${$page.params.version}`);
+	let version = $derived($page.params.version);
 
 	let inputMode: 'paste' | 'csv' | 'list' = $state('paste');
 	let emailInput = $state('');
+	let enrichExportPopoverId = $state('');
+
+	type InputModeOption = { id: string; label: string; icon: string };
+	let inputModeOptions = $derived<InputModeOption[]>(
+		version === 'v3' || version === 'v4'
+			? [
+					{ id: 'paste', label: 'Paste emails', icon: 'content_paste' },
+					{ id: 'csv', label: 'Upload CSV', icon: 'upload_file' },
+				]
+			: [
+					{ id: 'paste', label: 'Paste emails', icon: 'content_paste' },
+					{ id: 'csv', label: 'Upload CSV', icon: 'upload_file' },
+					{ id: 'list', label: 'Pick from your lists', icon: 'format_list_bulleted' },
+				]
+	);
 
 	const existingLists = [
 		{ id: '1', name: 'SaaS Founders Q1', count: 234, enriched: 198 },
@@ -36,11 +52,7 @@
 
 			<!-- Input mode selector -->
 			<div class="mb-6 flex gap-3">
-				{#each [
-					{ id: 'paste', label: 'Paste emails', icon: 'content_paste' },
-					{ id: 'csv', label: 'Upload CSV', icon: 'upload_file' },
-					{ id: 'list', label: 'Pick from your lists', icon: 'format_list_bulleted' },
-				] as mode}
+				{#each inputModeOptions as mode}
 					<button
 						class="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border text-sm font-medium transition-colors"
 						class:border-violet-200={inputMode === mode.id}
@@ -57,7 +69,7 @@
 			</div>
 
 			<!-- Input area -->
-			<div class="border-grey-200 rounded-2xl border p-6">
+			<div class="list-shell rounded-2xl p-6">
 				{#if inputMode === 'paste'}
 					<label for="reverse-emails" class="text-grey-700 mb-2 block text-sm font-medium">Email addresses</label>
 					<textarea
@@ -95,14 +107,14 @@
 			<div class="mt-6">
 				<p class="text-grey-700 mb-3 text-sm font-medium">Also enrich with (optional)</p>
 				<div class="flex gap-3">
-					<label class="border-grey-200 hover:border-violet-200 flex flex-1 cursor-pointer items-center gap-3 rounded-xl border p-4 transition-colors">
+					<label class="border-grey-200 hover:border-violet-300 flex flex-1 cursor-pointer items-center gap-3 rounded-xl border bg-white p-4 shadow-sm transition-all">
 						<input type="checkbox" />
 						<div>
 							<p class="text-grey-900 text-sm font-medium">Professional email</p>
 							<p class="text-grey-500 text-xs">+1 credit per contact</p>
 						</div>
 					</label>
-					<label class="border-grey-200 hover:border-violet-200 flex flex-1 cursor-pointer items-center gap-3 rounded-xl border p-4 transition-colors">
+					<label class="border-grey-200 hover:border-violet-300 flex flex-1 cursor-pointer items-center gap-3 rounded-xl border bg-white p-4 shadow-sm transition-all">
 						<input type="checkbox" />
 						<div>
 							<p class="text-grey-900 text-sm font-medium">Phone number</p>
@@ -113,9 +125,9 @@
 			</div>
 
 			<!-- Destination + Start -->
-			<div class="border-grey-200 mt-6 flex items-center justify-between rounded-xl border bg-white p-4 shadow-sm">
+			<div class="list-shell mt-6 flex items-center justify-between bg-white p-4">
 				<div class="flex items-center gap-4">
-					{#if inputMode !== 'list'}
+					{#if version !== 'v3' && version !== 'v4' && inputMode !== 'list'}
 						<div class="flex items-center gap-2">
 							<span class="material-icons-round text-grey-500 text-base">folder</span>
 							<select class="input h-9 text-sm">
@@ -138,7 +150,7 @@
 					<h2 class="text-grey-900 text-lg font-semibold">Recent Enrichments</h2>
 					<span class="text-grey-500 text-sm">{recentEnrichments.filter(e => e.status === 'running').length} running</span>
 				</div>
-				<div class="border-grey-200 mt-4 overflow-hidden rounded-xl border">
+				<div class="list-shell mt-4">
 					{#each recentEnrichments as enrichment, i}
 						<div
 							class="hover:bg-grey-50 flex items-center gap-4 px-5 py-4 transition-colors"
@@ -169,10 +181,53 @@
 							<div class="flex shrink-0 items-center gap-3">
 								<span class="text-grey-400 text-xs">{enrichment.started}</span>
 								{#if enrichment.status === 'completed'}
-									<a href="{base}/app/prospects/{enrichment.listId}" class="btn-ghost flex h-7 items-center gap-1 px-2 text-xs text-violet-700">
-										View in Lists
-										<span class="material-icons-round text-sm">arrow_forward</span>
-									</a>
+									{#if version === 'v4'}
+										<button class="btn-ghost flex h-7 items-center gap-1 px-2 text-xs" onclick={() => toast.show('Added to list')}>
+											<span class="material-icons-round text-grey-500 text-sm">playlist_add</span>
+											Add to list
+										</button>
+										<div class="relative">
+											<button class="btn-ghost flex h-7 items-center gap-1 px-2 text-xs" onclick={() => { enrichExportPopoverId = enrichExportPopoverId === enrichment.id ? '' : enrichment.id; }}>
+												<span class="material-icons-round text-grey-500 text-sm">download</span>
+												Export
+												<span class="material-icons-round text-grey-400 text-xs">expand_more</span>
+											</button>
+											{#if enrichExportPopoverId === enrichment.id}
+												<div class="absolute right-0 top-8 z-20 w-52 rounded-xl border border-grey-200 bg-white p-1.5 shadow-lg">
+													<button class="hover:bg-grey-50 flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-grey-800" onclick={() => { enrichExportPopoverId = ''; toast.show('Pushed to HubSpot'); }}>
+														<span class="material-icons-round text-base" style="color: #ff7a59;">hub</span>
+														Push to CRM
+													</button>
+													<button class="hover:bg-grey-50 flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-grey-800" onclick={() => { enrichExportPopoverId = ''; toast.show('CSV download started'); }}>
+														<span class="material-icons-round text-grey-500 text-base">description</span>
+														Export CSV
+													</button>
+													<button class="hover:bg-grey-50 flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-grey-800" onclick={() => { enrichExportPopoverId = ''; toast.show('Pushed to Outreach'); }}>
+														<span class="material-icons-round text-grey-500 text-base">campaign</span>
+														Push to engagement tool
+													</button>
+												</div>
+											{/if}
+										</div>
+									{:else if version === 'v3'}
+										<a href="{base}/app/prospects" class="btn-ghost flex h-7 items-center gap-1 px-2 text-xs text-violet-700">
+											All Contacts
+											<span class="material-icons-round text-sm">arrow_forward</span>
+										</a>
+										<button class="btn-ghost flex h-7 items-center gap-1 px-2 text-xs" onclick={() => toast.show('Export started — CSV will download shortly')}>
+											<span class="material-icons-round text-grey-500 text-sm">download</span>
+											Export
+										</button>
+										<button class="btn-ghost flex h-7 items-center gap-1 px-2 text-xs" style="color: #ff7a59;" onclick={() => toast.show('Pushed to HubSpot')}>
+											<span class="material-icons-round text-sm">hub</span>
+											Push
+										</button>
+									{:else}
+										<a href="{base}/app/prospects/{enrichment.listId}" class="btn-ghost flex h-7 items-center gap-1 px-2 text-xs text-violet-700">
+											View in Lists
+											<span class="material-icons-round text-sm">arrow_forward</span>
+										</a>
+									{/if}
 								{:else}
 									<span class="inline-flex h-6 items-center rounded-full bg-amber-50 px-2.5 text-xs font-medium text-amber-700">{enrichment.progress}%</span>
 								{/if}

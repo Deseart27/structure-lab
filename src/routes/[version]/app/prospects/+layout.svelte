@@ -4,10 +4,27 @@
 	let version = $derived($page.params.version);
 </script>
 
-<div
-	class="flex flex-col overflow-hidden"
-	class:h-[calc(100vh-64px)]={version !== 'v2'}
-	class:h-[calc(100vh-64px-40px)]={version === 'v2'}
->
-	{@render children()}
-</div>
+{#if version === 'v4'}
+	<section class="page m-2 flex rounded-3xl">
+		<main
+			class="flex w-full flex-col overflow-hidden rounded-2xl border border-grey-200 bg-white"
+			style="height: calc(100vh - 72px - 16px);"
+		>
+			{@render children()}
+		</main>
+	</section>
+{:else}
+	<div
+		class="flex flex-col overflow-hidden"
+		class:h-[calc(100vh-64px)]={version !== 'v2' && version !== 'v3'}
+		class:h-[calc(100vh-64px-40px)]={version === 'v2' || version === 'v3'}
+	>
+		{@render children()}
+	</div>
+{/if}
+
+<style>
+	.page {
+		box-shadow: 0px -4px 32px -4px rgba(3, 7, 18, 0.05);
+	}
+</style>

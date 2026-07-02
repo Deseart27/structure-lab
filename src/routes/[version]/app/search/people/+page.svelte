@@ -3,6 +3,8 @@
 	import { toast } from '$lib/toast.svelte';
 	let version = $derived($page.params.version);
 
+	let showExportPopover = $state(false);
+
 	const people = [
 		{ name: 'Sarah Chen', title: 'VP of Sales', company: 'Stripe', location: 'San Francisco, US', headcount: 8000, industry: 'Financial Technology' },
 		{ name: 'James Rodriguez', title: 'Head of Marketing', company: 'HubSpot', location: 'Boston, US', headcount: 7400, industry: 'Software' },
@@ -29,34 +31,68 @@
 			<h2 class="text-grey-900 text-base font-semibold">{people.length} people</h2>
 		</div>
 		<div class="flex items-center gap-2">
-			{#if version !== 'v2'}
-				<button class="btn-ghost h-8 gap-1.5 px-3 text-sm" onclick={() => toast.show('Export started — CSV will download shortly')}>
-					<span class="material-icons-round text-grey-600 text-base">download</span>
-					Export
+			{#if version === 'v4'}
+				<button class="btn-ghost h-8 gap-1.5 px-3 text-sm" onclick={() => toast.show('Contacts added to list')}>
+					<span class="material-icons-round text-grey-600 text-base">playlist_add</span>
+					Add to list
+				</button>
+				<div class="relative">
+					<button class="btn-ghost h-8 gap-1.5 px-3 text-sm" onclick={() => { showExportPopover = !showExportPopover; }}>
+						<span class="material-icons-round text-grey-600 text-base">download</span>
+						Export
+						<span class="material-icons-round text-grey-400 text-sm">expand_more</span>
+					</button>
+					{#if showExportPopover}
+						<div class="absolute right-0 top-10 z-20 w-52 rounded-xl border border-grey-200 bg-white p-1.5 shadow-lg">
+							<button class="hover:bg-grey-50 flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-grey-800" onclick={() => { showExportPopover = false; toast.show('Contacts pushed to HubSpot'); }}>
+								<span class="material-icons-round text-base" style="color: #ff7a59;">hub</span>
+								Push to CRM
+							</button>
+							<button class="hover:bg-grey-50 flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-grey-800" onclick={() => { showExportPopover = false; toast.show('CSV download started'); }}>
+								<span class="material-icons-round text-grey-500 text-base">description</span>
+								Export CSV
+							</button>
+							<button class="hover:bg-grey-50 flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-grey-800" onclick={() => { showExportPopover = false; toast.show('Pushed to Outreach'); }}>
+								<span class="material-icons-round text-grey-500 text-base">campaign</span>
+								Push to engagement tool
+							</button>
+						</div>
+					{/if}
+				</div>
+				<button class="btn-primary h-8 gap-1 px-3 text-sm" onclick={() => toast.show('Enrichment started — added to "SaaS Founders Q1"')}>
+					<span class="material-icons-round text-sm text-white">auto_awesome</span>
+					Enrich
+				</button>
+			{:else}
+				{#if version !== 'v2' && version !== 'v3'}
+					<button class="btn-ghost h-8 gap-1.5 px-3 text-sm" onclick={() => toast.show('Export started — CSV will download shortly')}>
+						<span class="material-icons-round text-grey-600 text-base">download</span>
+						Export
+					</button>
+				{/if}
+				<button class="btn-ghost h-8 gap-1.5 px-3 text-sm" onclick={() => toast.show('Contacts saved to list')}>
+					<span class="material-icons-round text-grey-600 text-base">playlist_add</span>
+					{version === 'v2' || version === 'v3' ? 'Save to list' : 'Add to list'}
+				</button>
+				{#if version === 'v2' || version === 'v3'}
+					<button class="btn-ghost h-8 gap-1.5 px-3 text-sm" style="color: #ff7a59;" onclick={() => toast.show('Contacts pushed to HubSpot')}>
+						<span class="material-icons-round text-base">hub</span>
+						Push to HubSpot
+					</button>
+				{/if}
+				<button class="btn-primary h-8 gap-1 px-3 text-sm" onclick={() => toast.show('Enrichment started — 15 contacts')}>
+					<span class="material-icons-round text-sm text-white">auto_awesome</span>
+					Enrich
 				</button>
 			{/if}
-			<button class="btn-ghost h-8 gap-1.5 px-3 text-sm" onclick={() => toast.show('Contacts saved to list')}>
-				<span class="material-icons-round text-grey-600 text-base">playlist_add</span>
-				{version === 'v2' ? 'Save to list' : 'Add to list'}
-			</button>
-			{#if version === 'v2'}
-				<button class="btn-ghost h-8 gap-1.5 px-3 text-sm" style="color: #ff7a59;" onclick={() => toast.show('Contacts pushed to HubSpot')}>
-					<span class="material-icons-round text-base">hub</span>
-					Push to HubSpot
-				</button>
-			{/if}
-			<button class="btn-primary h-8 gap-1 px-3 text-sm" onclick={() => toast.show('Enrichment started — 15 contacts')}>
-				<span class="material-icons-round text-sm text-white">auto_awesome</span>
-				Enrich
-			</button>
 		</div>
 	</div>
 
 	<!-- Table -->
 	<div class="bg-grey-50 flex-1 overflow-auto">
 		<table class="w-full min-w-[900px]">
-			<thead class="bg-grey-50 sticky top-0 z-10">
-				<tr class="border-grey-200 border-b">
+			<thead class="sticky top-0 z-10">
+				<tr class="table-header">
 					<th class="w-12 px-4 py-3"><input type="checkbox" /></th>
 					<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Name</th>
 					<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Job title</th>

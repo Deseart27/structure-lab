@@ -7,8 +7,10 @@
 	let base = $derived(`${svelteBase}/${version}`);
 
 	let mode: '' | 'csv' | 'manual' | 'list' = $state('');
-	let enrichType: 'phone-email' | 'phone' | 'email' = $state('phone-email');
-	let personalEmail = $state(false);
+	let wantPhone = $state(true);
+	let wantEmail = $state(true);
+	let wantPersonalEmail = $state(false);
+	let enrichExportPopoverId = $state('');
 
 	// V1: enrichment history (old model — lists inside enrich section)
 	const v1Enrichments = [
@@ -52,40 +54,38 @@
 					</button>
 				{/if}
 				<h1 class="text-grey-900 text-2xl font-semibold" style:transform={mode ? 'translateX(8px)' : ''}>
-					{version === 'v2' ? 'Emails & Phones' : 'New Enrichment'}
+					{version === 'v2' || version === 'v3' || version === 'v4' ? 'Emails & Phones' : 'New Enrichment'}
 				</h1>
-				<div class="text-grey-500 flex items-center gap-1.5 text-sm">
-					<span class="material-icons-round text-base">timelapse</span>
-					Contacts are stored 3 months
-				</div>
+				{#if version !== 'v4'}
+					<div class="text-grey-500 flex items-center gap-1.5 text-sm">
+						<span class="material-icons-round text-base">timelapse</span>
+						Contacts are stored 3 months
+					</div>
+				{/if}
 			</div>
 
-			<!-- Enrichment type selector (shown when mode is selected, or always in v2 before mode) -->
-			{#if mode !== '' || (version === 'v2' && mode === '')}
+			<!-- Enrichment type checkboxes (shown when mode is selected, or always in v2 before mode) -->
+			{#if mode !== '' || ((version === 'v2' || version === 'v3' || version === 'v4') && mode === '')}
 				<div class="mb-6 flex gap-3">
-					{#each [
-						{ id: 'phone-email', label: 'Phone + Email', icon: 'auto_awesome' },
-						{ id: 'phone', label: 'Phone', icon: 'phone' },
-						{ id: 'email', label: 'Email', icon: 'email' },
-					] as type}
-						<button
-							class="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border text-sm font-medium transition-colors"
-							class:border-violet-200={enrichType === type.id}
-							class:bg-violet-50={enrichType === type.id}
-							class:text-violet-800={enrichType === type.id}
-							class:border-grey-200={enrichType !== type.id}
-							class:text-grey-700={enrichType !== type.id}
-							onclick={() => { enrichType = type.id as typeof enrichType; }}
-						>
-							<span class="material-icons-round text-base">{type.icon}</span>
-							{type.label}
-						</button>
-					{/each}
-					{#if version === 'v2'}
+					<label
+						class="flex h-11 flex-1 cursor-pointer items-center justify-center gap-2.5 rounded-xl border text-sm font-medium transition-all {wantPhone ? 'border-violet-300 bg-violet-50 text-violet-800 shadow-sm' : 'border-grey-200 text-grey-600 hover:border-grey-300'}"
+					>
+						<input type="checkbox" class="sr-only" bind:checked={wantPhone} />
+						<span class="material-icons-round text-base">phone</span>
+						Phone
+					</label>
+					<label
+						class="flex h-11 flex-1 cursor-pointer items-center justify-center gap-2.5 rounded-xl border text-sm font-medium transition-all {wantEmail ? 'border-violet-300 bg-violet-50 text-violet-800 shadow-sm' : 'border-grey-200 text-grey-600 hover:border-grey-300'}"
+					>
+						<input type="checkbox" class="sr-only" bind:checked={wantEmail} />
+						<span class="material-icons-round text-base">email</span>
+						Email
+					</label>
+					{#if version === 'v2' || version === 'v3' || version === 'v4'}
 						<label
-							class="flex h-11 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border text-sm font-medium transition-colors {personalEmail ? 'border-pink-200 bg-pink-50 text-pink-800' : 'border-grey-200 text-grey-700'}"
+							class="flex h-11 flex-1 cursor-pointer items-center justify-center gap-2.5 rounded-xl border text-sm font-medium transition-all {wantPersonalEmail ? 'border-pink-300 bg-pink-50 text-pink-800 shadow-sm' : 'border-grey-200 text-grey-600 hover:border-grey-300'}"
 						>
-							<input type="checkbox" class="sr-only" bind:checked={personalEmail} />
+							<input type="checkbox" class="sr-only" bind:checked={wantPersonalEmail} />
 							<span class="material-icons-round text-base">person</span>
 							Personal Email
 						</label>
@@ -97,7 +97,7 @@
 			{#if mode === ''}
 				<div class="flex gap-4">
 					<button
-						class="border-grey-200 hover:border-violet-200 hover:bg-violet-50 flex flex-1 flex-col items-center gap-3 rounded-2xl border p-8 transition-colors"
+						class="border-grey-200 hover:border-violet-300 hover:bg-violet-50/40 flex flex-1 flex-col items-center gap-3 rounded-2xl border bg-white p-8 shadow-sm transition-all"
 						onclick={() => { mode = 'csv'; }}
 					>
 						<span class="material-icons-round text-violet-700 text-3xl">upload_file</span>
@@ -105,16 +105,16 @@
 						<span class="text-grey-500 text-sm">Upload a file with contacts to enrich</span>
 					</button>
 					<button
-						class="border-grey-200 hover:border-violet-200 hover:bg-violet-50 flex flex-1 flex-col items-center gap-3 rounded-2xl border p-8 transition-colors"
+						class="border-grey-200 hover:border-violet-300 hover:bg-violet-50/40 flex flex-1 flex-col items-center gap-3 rounded-2xl border bg-white p-8 shadow-sm transition-all"
 						onclick={() => { mode = 'manual'; }}
 					>
 						<span class="material-icons-round text-violet-700 text-3xl">edit_note</span>
 						<span class="text-grey-900 font-semibold">Enrich manually</span>
 						<span class="text-grey-500 text-sm">Add contacts one by one</span>
 					</button>
-					{#if version === 'v2'}
+					{#if version === 'v2' || version === 'v4'}
 						<button
-							class="border-grey-200 hover:border-violet-200 hover:bg-violet-50 flex flex-1 flex-col items-center gap-3 rounded-2xl border p-8 transition-colors"
+							class="border-grey-200 hover:border-violet-300 hover:bg-violet-50/40 flex flex-1 flex-col items-center gap-3 rounded-2xl border bg-white p-8 shadow-sm transition-all"
 							onclick={() => { mode = 'list'; }}
 						>
 							<span class="material-icons-round text-violet-700 text-3xl">format_list_bulleted</span>
@@ -122,21 +122,23 @@
 							<span class="text-grey-500 text-sm">Enrich contacts already in a list</span>
 						</button>
 					{/if}
+
 				</div>
 
-				<!-- V2: Recent Enrichments -->
-				{#if version === 'v2'}
+				<!-- V2/V3/V4: Recent Enrichments -->
+				{#if version === 'v2' || version === 'v3' || version === 'v4'}
+					{@const filteredEnrichments = version === 'v3' ? recentEnrichments.filter(e => e.input !== 'List') : recentEnrichments}
 					<div class="mt-12 mb-20">
 						<div class="flex items-center justify-between">
 							<h2 class="text-grey-900 text-lg font-semibold">Recent Enrichments</h2>
-							<span class="text-grey-500 text-sm">{recentEnrichments.filter(e => e.status === 'running').length} running</span>
+							<span class="text-grey-500 text-sm">{filteredEnrichments.filter(e => e.status === 'running').length} running</span>
 						</div>
-						<div class="border-grey-200 mt-4 overflow-hidden rounded-xl border">
-							{#each recentEnrichments as enrichment, i}
+						<div class="list-shell mt-4">
+							{#each filteredEnrichments as enrichment, i}
 								<div
 									class="hover:bg-grey-50 flex items-center gap-4 px-5 py-4 transition-colors"
-									class:border-grey-100={i < recentEnrichments.length - 1}
-									class:border-b={i < recentEnrichments.length - 1}
+									class:border-grey-100={i < filteredEnrichments.length - 1}
+									class:border-b={i < filteredEnrichments.length - 1}
 								>
 									<div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg {enrichment.status === 'running' ? 'bg-amber-50' : enrichment.status === 'queued' ? 'bg-grey-100' : 'bg-emerald-50'}">
 										<span class="material-icons-round text-lg {enrichment.status === 'running' ? 'text-amber-600' : enrichment.status === 'queued' ? 'text-grey-500' : 'text-emerald-600'}">
@@ -170,10 +172,53 @@
 									<div class="flex shrink-0 items-center gap-3">
 										<span class="text-grey-400 text-xs">{enrichment.started}</span>
 										{#if enrichment.status === 'completed'}
-											<a href="{base}/app/prospects/{enrichment.listId}" class="btn-ghost flex h-7 items-center gap-1 px-2 text-xs text-violet-700">
-												View in Lists
-												<span class="material-icons-round text-sm">arrow_forward</span>
-											</a>
+											{#if version === 'v4'}
+												<button class="btn-ghost flex h-7 items-center gap-1 px-2 text-xs" onclick={() => toast.show('Added to list')}>
+													<span class="material-icons-round text-grey-500 text-sm">playlist_add</span>
+													Add to list
+												</button>
+												<div class="relative">
+													<button class="btn-ghost flex h-7 items-center gap-1 px-2 text-xs" onclick={() => { enrichExportPopoverId = enrichExportPopoverId === enrichment.id ? '' : enrichment.id; }}>
+														<span class="material-icons-round text-grey-500 text-sm">download</span>
+														Export
+														<span class="material-icons-round text-grey-400 text-xs">expand_more</span>
+													</button>
+													{#if enrichExportPopoverId === enrichment.id}
+														<div class="absolute right-0 top-8 z-20 w-52 rounded-xl border border-grey-200 bg-white p-1.5 shadow-lg">
+															<button class="hover:bg-grey-50 flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-grey-800" onclick={() => { enrichExportPopoverId = ''; toast.show('Pushed to HubSpot'); }}>
+																<span class="material-icons-round text-base" style="color: #ff7a59;">hub</span>
+																Push to CRM
+															</button>
+															<button class="hover:bg-grey-50 flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-grey-800" onclick={() => { enrichExportPopoverId = ''; toast.show('CSV download started'); }}>
+																<span class="material-icons-round text-grey-500 text-base">description</span>
+																Export CSV
+															</button>
+															<button class="hover:bg-grey-50 flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-grey-800" onclick={() => { enrichExportPopoverId = ''; toast.show('Pushed to Outreach'); }}>
+																<span class="material-icons-round text-grey-500 text-base">campaign</span>
+																Push to engagement tool
+															</button>
+														</div>
+													{/if}
+												</div>
+											{:else if version === 'v3'}
+												<a href="{base}/app/prospects" class="btn-ghost flex h-7 items-center gap-1 px-2 text-xs text-violet-700">
+													All Contacts
+													<span class="material-icons-round text-sm">arrow_forward</span>
+												</a>
+												<button class="btn-ghost flex h-7 items-center gap-1 px-2 text-xs" onclick={() => toast.show('Export started — CSV will download shortly')}>
+													<span class="material-icons-round text-grey-500 text-sm">download</span>
+													Export
+												</button>
+												<button class="btn-ghost flex h-7 items-center gap-1 px-2 text-xs" style="color: #ff7a59;" onclick={() => toast.show('Pushed to HubSpot')}>
+													<span class="material-icons-round text-sm">hub</span>
+													Push
+												</button>
+											{:else}
+												<a href="{base}/app/prospects/{enrichment.listId}" class="btn-ghost flex h-7 items-center gap-1 px-2 text-xs text-violet-700">
+													View in Lists
+													<span class="material-icons-round text-sm">arrow_forward</span>
+												</a>
+											{/if}
 										{:else if enrichment.status === 'running'}
 											<span class="inline-flex h-6 items-center rounded-full bg-amber-50 px-2.5 text-xs font-medium text-amber-700">{enrichment.progress}%</span>
 										{/if}
@@ -232,7 +277,7 @@
 
 			{:else}
 				<!-- Input area -->
-				<div class="border-grey-200 rounded-2xl border p-6">
+				<div class="list-shell rounded-2xl p-6">
 					{#if mode === 'csv'}
 						<div class="border-grey-300 flex flex-col items-center justify-center rounded-xl border-2 border-dashed px-8 py-16 transition-colors hover:border-violet-300 hover:bg-violet-50/20">
 							<span class="material-icons-round text-grey-400 text-5xl">cloud_upload</span>
@@ -277,11 +322,11 @@
 					{/if}
 				</div>
 
-				<!-- Destination + Start (v2 only) -->
-				{#if version === 'v2'}
-					<div class="border-grey-200 mt-6 mb-20 flex items-center justify-between rounded-xl border bg-white p-4 shadow-sm">
+				<!-- Destination + Start (v2/v3/v4) -->
+				{#if version === 'v2' || version === 'v3' || version === 'v4'}
+					<div class="list-shell mt-6 mb-20 flex items-center justify-between bg-white p-4">
 						<div class="flex items-center gap-4">
-							{#if mode !== 'list'}
+							{#if version === 'v2' && mode !== 'list'}
 								<div class="flex items-center gap-2">
 									<span class="material-icons-round text-grey-500 text-base">folder</span>
 									<select class="input h-9 text-sm">

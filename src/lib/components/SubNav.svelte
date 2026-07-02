@@ -4,6 +4,7 @@
 
 	let route = $derived($page.url.pathname);
 	let base = $derived(`${svelteBase}/${$page.params.version}`);
+	let version = $derived($page.params.version);
 
 	type SubItem = { label: string; href: string; match: string };
 
@@ -13,7 +14,7 @@
 		items: SubItem[];
 	};
 
-	const sections: SectionConfig[] = [
+	const baseSections: SectionConfig[] = [
 		{
 			section: 'search',
 			match: '/search',
@@ -33,12 +34,37 @@
 		},
 	];
 
+	// V3: same search sub-nav as v2, adds Lists sub-nav (Lists | All Contacts)
+	let sections = $derived<SectionConfig[]>(
+		version === 'v3'
+			? [
+					...baseSections,
+					{
+						section: 'lists',
+						match: '/prospects',
+						items: [
+							{ label: 'Lists', href: '/app/prospects/lists', match: '/prospects/lists' },
+							{ label: 'All Contacts', href: '/app/prospects', match: '/prospects' },
+						],
+					},
+				]
+			: baseSections // v2 and v4 use baseSections (search + enrich sub-navs only)
+	);
+
 	let activeSection = $derived(sections.find((s) => route.includes(s.match)));
 
 	function isActive(item: SubItem): boolean {
 		// For "Emails & Phones" (the default enrich), match exactly — not when on /enrich/reverse or /enrich/crm
 		if (item.match === '/enrich') {
 			return route.includes('/enrich') && !route.includes('/enrich/reverse') && !route.includes('/enrich/crm');
+		}
+		// For "All Contacts" (/prospects), match only exact — not /prospects/lists or /prospects/[id]
+		if (item.match === '/prospects' && !item.match.includes('/lists')) {
+			return route.endsWith('/prospects') || route.endsWith('/prospects/');
+		}
+		// For "Lists" (/prospects/lists), also match /prospects/[id] (list detail pages)
+		if (item.match === '/prospects/lists') {
+			return route.includes('/prospects/lists') || (route.includes('/prospects/') && !route.endsWith('/prospects') && !route.endsWith('/prospects/'));
 		}
 		return route.includes(item.match);
 	}

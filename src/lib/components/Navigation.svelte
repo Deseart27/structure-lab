@@ -9,7 +9,21 @@
 	type NavItem = { label: string; href: string; match: string; badge?: string };
 
 	let navItems = $derived<NavItem[]>(
-		version === 'v2'
+		version === 'v4'
+			? [
+					{ label: 'Search', href: `${base}/app/search`, match: '/search' },
+					{ label: 'Enrichment', href: `${base}/app/enrich`, match: '/enrich' },
+					{ label: 'Lists', href: `${base}/app/prospects`, match: '/prospects' },
+					{ label: 'Integrations', href: `${base}/app/integrations`, match: '/integrations' },
+				]
+			: version === 'v3'
+			? [
+					{ label: 'Search', href: `${base}/app/search`, match: '/search' },
+					{ label: 'Enrichment', href: `${base}/app/enrich`, match: '/enrich' },
+					{ label: 'Lists', href: `${base}/app/prospects/lists`, match: '/prospects' },
+					{ label: 'Integrations', href: `${base}/app/integrations`, match: '/integrations' },
+				]
+			: version === 'v2'
 			? [
 					{ label: 'Search', href: `${base}/app/search`, match: '/search' },
 					{ label: 'Enrichment', href: `${base}/app/enrich`, match: '/enrich' },

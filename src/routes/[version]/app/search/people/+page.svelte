@@ -141,7 +141,66 @@
 					Enrich
 				</button>
 			{:else if version === 'v6'}
-				<!-- V6: no persistent header actions — selection-driven action bar below -->
+				{#if v6Selected.size > 0}
+					<span class="text-grey-500 mr-1 text-sm">{v6Selected.size} selected</span>
+				{/if}
+
+				<!-- Add to list — disabled when no selection -->
+				<div class="relative">
+					<button
+						class="btn-ghost h-8 gap-1.5 px-3 text-sm"
+						disabled={v6Selected.size === 0}
+						onclick={() => { v6AddToListOpen = !v6AddToListOpen; v6ExportOpen = false; }}
+					>
+						<span class="material-icons-round text-grey-600 text-base">playlist_add</span>
+						Add to list
+						<span class="material-icons-round text-grey-400 text-sm">expand_more</span>
+					</button>
+					{#if v6AddToListOpen}
+						<button class="fixed inset-0 z-30" onclick={() => { v6AddToListOpen = false; }} aria-label="Close"></button>
+						<div class="absolute right-0 top-full z-40 mt-1 w-52 rounded-xl border border-grey-200 bg-white p-1.5 shadow-lg">
+							{#each v6Store.lists.filter(l => l.type === 'people') as list}
+								<button
+									class="hover:bg-grey-50 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-grey-800"
+									onclick={() => v6AddToList(list.name)}
+								>
+									<span class="material-icons-round text-grey-400 text-base">list</span>
+									{list.name}
+								</button>
+							{/each}
+							<div class="my-1 border-t border-grey-100"></div>
+							<button
+								class="hover:bg-grey-50 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-violet-700"
+								onclick={() => { v6AddToListOpen = false; toast.show('New list created'); }}
+							>
+								<span class="material-icons-round text-base">add</span>
+								Create new list
+							</button>
+						</div>
+					{/if}
+				</div>
+
+				<!-- Export — always active -->
+				<div class="relative">
+					<button
+						class="btn-ghost h-8 gap-1.5 px-3 text-sm"
+						onclick={() => { v6ExportOpen = !v6ExportOpen; v6AddToListOpen = false; }}
+					>
+						<span class="material-icons-round text-grey-600 text-base">download</span>
+						Export
+						<span class="material-icons-round text-grey-400 text-sm">expand_more</span>
+					</button>
+					<ExportPopover bind:open={v6ExportOpen} context="people" count={v6Selected.size || people.length} sourceName="VP Sales · SaaS · France" />
+				</div>
+
+				<!-- Enrich — always active -->
+				<button
+					class="btn-primary h-8 gap-1 px-3 text-sm"
+					onclick={() => { if (v6Selected.size > 0) { v6EnrichModalOpen = true; } else { toast.show('Select contacts to enrich'); } }}
+				>
+					<span class="material-icons-round text-sm text-white">auto_awesome</span>
+					Enrich
+				</button>
 			{:else}
 				{#if version !== 'v2' && version !== 'v3'}
 					<button class="btn-ghost h-8 gap-1.5 px-3 text-sm" onclick={() => toast.show('Export started — CSV will download shortly')}>
@@ -180,65 +239,6 @@
 			</span>
 			<span class="text-grey-400 text-xs">{people.length} results</span>
 		</div>
-
-		<!-- V6 selection action bar -->
-		{#if v6Selected.size > 0}
-			<div class="border-grey-100 bg-grey-50 flex shrink-0 items-center gap-2 border-b px-6 py-2">
-				<span class="text-grey-600 mr-1 text-sm font-medium">{v6Selected.size} selected</span>
-				<button
-					class="btn-primary h-8 gap-1 px-3 text-sm"
-					onclick={() => { v6EnrichModalOpen = true; }}
-				>
-					<span class="material-icons-round text-sm text-white">auto_awesome</span>
-					Enrich
-				</button>
-				<!-- Add to list -->
-				<div class="relative">
-					<button
-						class="btn-ghost h-8 gap-1.5 px-3 text-sm"
-						onclick={() => { v6AddToListOpen = !v6AddToListOpen; v6ExportOpen = false; }}
-					>
-						<span class="material-icons-round text-grey-600 text-base">playlist_add</span>
-						Add to list
-						<span class="material-icons-round text-grey-400 text-sm">expand_more</span>
-					</button>
-					{#if v6AddToListOpen}
-						<button class="fixed inset-0 z-30" onclick={() => { v6AddToListOpen = false; }} aria-label="Close"></button>
-						<div class="absolute left-0 top-full z-40 mt-1 w-52 rounded-xl border border-grey-200 bg-white p-1.5 shadow-lg">
-							{#each v6Store.lists.filter(l => l.type === 'people') as list}
-								<button
-									class="hover:bg-grey-50 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-grey-800"
-									onclick={() => v6AddToList(list.name)}
-								>
-									<span class="material-icons-round text-grey-400 text-base">list</span>
-									{list.name}
-								</button>
-							{/each}
-							<div class="my-1 border-t border-grey-100"></div>
-							<button
-								class="hover:bg-grey-50 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-violet-700"
-								onclick={() => { v6AddToListOpen = false; toast.show('New list created'); }}
-							>
-								<span class="material-icons-round text-base">add</span>
-								Create new list
-							</button>
-						</div>
-					{/if}
-				</div>
-				<!-- Export -->
-				<div class="relative">
-					<button
-						class="btn-ghost h-8 gap-1.5 px-3 text-sm"
-						onclick={() => { v6ExportOpen = !v6ExportOpen; v6AddToListOpen = false; }}
-					>
-						<span class="material-icons-round text-grey-600 text-base">download</span>
-						Export
-						<span class="material-icons-round text-grey-400 text-sm">expand_more</span>
-					</button>
-					<ExportPopover bind:open={v6ExportOpen} context="people" count={v6Selected.size} sourceName="VP Sales · SaaS · France" />
-				</div>
-			</div>
-		{/if}
 
 		<!-- V6 Table -->
 		<div class="bg-grey-50 flex-1 overflow-auto">

@@ -16,20 +16,14 @@
 	);
 	let v6SearchOpen = $derived(v6SearchResults.length > 0);
 
-	// Source / status filters
-	type SourceFilter = 'all' | 'csv' | 'manual' | 'reverse' | 'crm' | 'search';
+	// Status filter
 	type StatusFilter = 'all' | 'running' | 'completed';
-	let v6SourceFilter = $state<SourceFilter>('all');
 	let v6StatusFilter = $state<StatusFilter>('all');
 
 	let v6FilteredJobs = $derived(v6Store.jobs.filter(job => {
-		const sourceMatch = v6SourceFilter === 'all' || (
-			v6SourceFilter === 'search' ? (job.source === 'search-batch' || job.source === 'search-inline') : job.source === v6SourceFilter
-		);
-		const statusMatch = v6StatusFilter === 'all' || (
-			v6StatusFilter === 'completed' ? (job.status === 'completed' || job.status === 'completed-errors') : job.status === v6StatusFilter
-		);
-		return sourceMatch && statusMatch;
+		if (v6StatusFilter === 'all') return true;
+		if (v6StatusFilter === 'completed') return job.status === 'completed' || job.status === 'completed-errors';
+		return job.status === v6StatusFilter;
 	}));
 
 	// New enrichment modal
@@ -91,6 +85,10 @@
 	function v6SelectMode(m: typeof v6ModalMode) {
 		v6ModalMode = m;
 		v6ModalStep = 2;
+		v6ModalOpen = true;
+		v6WantProfEmail = true;
+		v6WantPhone = false;
+		v6WantPersonalEmail = false;
 	}
 
 	function v6Launch() {
@@ -171,7 +169,7 @@
 		<div class="mx-8 w-full max-w-[1100px]">
 
 			<!-- Header row -->
-			<div class="flex items-center justify-between gap-4 pb-5">
+			<div class="flex items-center justify-between gap-4 pb-4">
 				<h1 class="text-grey-900 text-2xl font-semibold shrink-0">Enrichment</h1>
 
 				<!-- Global search -->
@@ -219,36 +217,44 @@
 						</div>
 					{/if}
 				</div>
-
-				<button class="btn-primary h-9 gap-2 px-4 text-sm font-semibold shrink-0" onclick={v6OpenModal}>
-					<span class="material-icons-round text-sm text-white">add</span>
-					New enrichment
-				</button>
 			</div>
 
-			<!-- Filters row -->
-			<div class="flex items-center gap-6 pb-5">
-				<!-- Source filters -->
-				<div class="flex items-center gap-1">
-					{#each [['all', 'All'], ['csv', 'CSV'], ['manual', 'Manual'], ['reverse', 'Reverse'], ['crm', 'CRM'], ['search', 'Search']] as [val, label]}
-						<button
-							class="h-7 rounded-full px-3 text-xs font-medium transition-colors
-								{v6SourceFilter === val ? 'bg-grey-900 text-white' : 'text-grey-600 hover:bg-grey-100'}"
-							onclick={() => { v6SourceFilter = val as typeof v6SourceFilter; }}
-						>{label}</button>
-					{/each}
-				</div>
-				<div class="h-4 w-px bg-grey-200"></div>
-				<!-- Status filters -->
-				<div class="flex items-center gap-1">
-					{#each [['all', 'All'], ['running', 'Running'], ['completed', 'Completed']] as [val, label]}
-						<button
-							class="h-7 rounded-full px-3 text-xs font-medium transition-colors
-								{v6StatusFilter === val ? 'bg-grey-900 text-white' : 'text-grey-600 hover:bg-grey-100'}"
-							onclick={() => { v6StatusFilter = val as typeof v6StatusFilter; }}
-						>{label}</button>
-					{/each}
-				</div>
+			<!-- Enrichment mode cards — always visible -->
+			<div class="flex gap-2.5 pb-5">
+				{#each [
+					{ mode: 'csv', icon: 'upload_file', label: 'Upload CSV', sub: 'up to 64k contacts' },
+					{ mode: 'manual', icon: 'edit_note', label: 'Add manually', sub: 'name + company or LinkedIn' },
+					{ mode: 'reverse', icon: 'swap_horiz', label: 'Reverse emails', sub: 'paste emails, get profiles', badge: 'New' },
+					{ mode: 'crm', icon: 'hub', label: 'From CRM', sub: 'enrich HubSpot lists' },
+					{ mode: 'list', icon: 'format_list_bulleted', label: 'From a list', sub: 'enrich an existing list' },
+				] as opt}
+					<button
+						class="group relative flex flex-1 items-center gap-3 rounded-xl border border-grey-200 bg-white px-4 py-3 text-left shadow-sm transition-all hover:border-violet-300 hover:bg-violet-50/40 hover:shadow-md"
+						onclick={() => v6SelectMode(opt.mode as typeof v6ModalMode)}
+					>
+						{#if opt.badge}
+							<span class="absolute -top-1.5 -right-1.5 rounded-full bg-violet-600 px-1.5 py-0.5 text-[9px] font-semibold text-white leading-none">{opt.badge}</span>
+						{/if}
+						<div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-50 transition-colors group-hover:bg-violet-100">
+							<span class="material-icons-round text-violet-600 text-lg">{opt.icon}</span>
+						</div>
+						<div class="min-w-0">
+							<p class="text-grey-900 text-sm font-semibold">{opt.label}</p>
+							<p class="text-grey-500 text-xs truncate">{opt.sub}</p>
+						</div>
+					</button>
+				{/each}
+			</div>
+
+			<!-- Status filters -->
+			<div class="flex items-center gap-1 pb-4">
+				{#each [['all', 'All'], ['running', 'Running'], ['completed', 'Completed']] as [val, label]}
+					<button
+						class="h-7 rounded-full px-3 text-xs font-medium transition-colors
+							{v6StatusFilter === val ? 'bg-grey-900 text-white' : 'text-grey-600 hover:bg-grey-100'}"
+						onclick={() => { v6StatusFilter = val as typeof v6StatusFilter; }}
+					>{label}</button>
+				{/each}
 			</div>
 
 			<!-- Pinned running job banner -->
@@ -405,17 +411,7 @@
 			<!-- Modal header -->
 			<div class="flex items-center justify-between border-b border-grey-100 px-6 py-4">
 				<div class="flex items-center gap-3">
-					{#if v6ModalStep === 2}
-						<button class="btn-ghost flex h-8 w-8 items-center justify-center rounded-lg p-0" onclick={() => { v6ModalStep = 1; v6ModalMode = ''; }}>
-							<span class="material-icons-round text-grey-600 text-lg">arrow_back</span>
-						</button>
-					{/if}
-					<h2 class="text-grey-900 text-lg font-semibold">
-						{v6ModalStep === 1 ? 'New enrichment' : 'Configure enrichment'}
-					</h2>
-					{#if v6ModalStep === 2}
-						<span class="text-grey-400 text-sm">Step 2 of 2</span>
-					{/if}
+					<h2 class="text-grey-900 text-lg font-semibold">Configure enrichment</h2>
 				</div>
 				<button class="btn-ghost flex h-8 w-8 items-center justify-center rounded-lg p-0" onclick={() => { v6ModalOpen = false; }}>
 					<span class="material-icons-round text-grey-500 text-lg">close</span>
@@ -423,33 +419,8 @@
 			</div>
 
 			<div class="p-6">
-				{#if v6ModalStep === 1}
-					<!-- Step 1: What do you have? -->
-					<p class="text-grey-600 mb-5 text-sm">What do you have?</p>
-					<div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
-						{#each [
-							{ mode: 'csv', icon: 'upload_file', label: 'Upload a CSV', sub: 'up to 64,000 contacts' },
-							{ mode: 'manual', icon: 'edit_note', label: 'Add manually', sub: 'name + company or LinkedIn URL' },
-							{ mode: 'reverse', icon: 'swap_horiz', label: 'Emails to reverse', sub: 'paste emails, get full profiles', badge: 'New' },
-							{ mode: 'crm', icon: 'hub', label: 'From my CRM', sub: 'enrich HubSpot lists' },
-							{ mode: 'list', icon: 'format_list_bulleted', label: 'From a list', sub: 'enrich an existing FullEnrich list' },
-						] as opt}
-							<button
-								class="border-grey-200 hover:border-violet-300 hover:bg-violet-50/40 relative flex flex-col items-center gap-2.5 rounded-xl border bg-white p-5 text-center shadow-sm transition-all"
-								onclick={() => v6SelectMode(opt.mode as typeof v6ModalMode)}
-							>
-								{#if opt.badge}
-									<span class="absolute top-2.5 right-2.5 rounded-full bg-violet-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">{opt.badge}</span>
-								{/if}
-								<span class="material-icons-round text-violet-700 text-3xl">{opt.icon}</span>
-								<span class="text-grey-900 text-sm font-semibold">{opt.label}</span>
-								<span class="text-grey-500 text-xs">{opt.sub}</span>
-							</button>
-						{/each}
-					</div>
-
-				{:else}
-					<!-- Step 2: Enrichment types + mode-specific input -->
+				{#if v6ModalStep === 2}
+					<!-- Enrichment types + mode-specific input -->
 					<!-- Enrichment type checkboxes -->
 					<p class="text-grey-600 mb-3 text-sm font-medium">What to find?</p>
 					<div class="mb-5 flex gap-3">

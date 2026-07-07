@@ -4,7 +4,8 @@
 	import Logo from './Logo.svelte';
 	import Navigation from './Navigation.svelte';
 
-	let base = $derived(`${svelteBase}/${$page.params.version}`);
+	let version = $derived($page.params.version);
+	let base = $derived(`${svelteBase}/${version}`);
 </script>
 
 <div class="border-grey-200 flex h-16 w-full min-w-0 items-center justify-between gap-4 border-b bg-white px-6" style="box-shadow: 0px 1px 2px 0px rgba(57, 47, 60, 0.04);">
@@ -16,6 +17,18 @@
 	</div>
 
 	<div class="flex shrink-0 items-center gap-3 lg:gap-5">
+		{#if version === 'v6'}
+			<!-- New enrichment shortcut -->
+			<a
+				href="{base}/app/enrich"
+				class="flex h-8 items-center gap-1.5 rounded-lg border border-grey-200 bg-white px-2.5 text-sm font-medium text-grey-600 transition-colors hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700"
+				title="New enrichment"
+			>
+				<span class="material-icons-round text-base">add</span>
+				<span class="hidden lg:inline">New enrichment</span>
+			</a>
+		{/if}
+
 		<!-- Credit chip -->
 		<button class="text-grey-900 flex h-8 items-center rounded-3xl border border-amber-200 bg-amber-50 py-1 pr-3 pl-2 text-sm font-medium">
 			<span class="material-icons-round mr-1.5 text-base text-amber-500">stars</span>

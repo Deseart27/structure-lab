@@ -82,13 +82,23 @@
 		v6WantPersonalEmail = false;
 	}
 
+	// Output-first: user picks what they want, then how to provide contacts
+	type OutputType = 'emails' | 'phones' | 'reverse' | 'all';
+	let v6OutputType = $state<OutputType>('emails');
+
+	function v6SelectOutput(output: OutputType) {
+		v6OutputType = output;
+		v6ModalMode = output === 'reverse' ? 'reverse' : '';
+		v6ModalStep = output === 'reverse' ? 2 : 1;
+		v6ModalOpen = true;
+		v6WantProfEmail = output === 'emails' || output === 'all';
+		v6WantPhone = output === 'phones' || output === 'all';
+		v6WantPersonalEmail = false;
+	}
+
 	function v6SelectMode(m: typeof v6ModalMode) {
 		v6ModalMode = m;
 		v6ModalStep = 2;
-		v6ModalOpen = true;
-		v6WantProfEmail = true;
-		v6WantPhone = false;
-		v6WantPersonalEmail = false;
 	}
 
 	function v6Launch() {
@@ -219,31 +229,60 @@
 				</div>
 			</div>
 
-			<!-- Enrichment mode cards — always visible -->
-			<div class="flex gap-2.5 pb-5">
-				{#each [
-					{ mode: 'csv', icon: 'upload_file', label: 'Upload CSV', sub: 'up to 64k contacts' },
-					{ mode: 'manual', icon: 'edit_note', label: 'Add manually', sub: 'name + company or LinkedIn' },
-					{ mode: 'reverse', icon: 'swap_horiz', label: 'Reverse emails', sub: 'paste emails, get profiles', badge: 'New' },
-					{ mode: 'crm', icon: 'hub', label: 'From CRM', sub: 'enrich HubSpot lists' },
-					{ mode: 'list', icon: 'format_list_bulleted', label: 'From a list', sub: 'enrich an existing list' },
-				] as opt}
-					<button
-						class="group relative flex flex-1 items-center gap-3 rounded-xl border border-grey-200 bg-white px-4 py-3 text-left shadow-sm transition-all hover:border-violet-300 hover:bg-violet-50/40 hover:shadow-md"
-						onclick={() => v6SelectMode(opt.mode as typeof v6ModalMode)}
-					>
-						{#if opt.badge}
-							<span class="absolute -top-1.5 -right-1.5 rounded-full bg-violet-600 px-1.5 py-0.5 text-[9px] font-semibold text-white leading-none">{opt.badge}</span>
-						{/if}
-						<div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-50 transition-colors group-hover:bg-violet-100">
-							<span class="material-icons-round text-violet-600 text-lg">{opt.icon}</span>
-						</div>
-						<div class="min-w-0">
-							<p class="text-grey-900 text-sm font-semibold">{opt.label}</p>
-							<p class="text-grey-500 text-xs truncate">{opt.sub}</p>
-						</div>
-					</button>
-				{/each}
+			<!-- Output-first CTAs -->
+			<div class="grid grid-cols-4 gap-3 pb-6">
+				<button
+					class="group flex flex-col items-center gap-3 rounded-2xl border-2 border-violet-200 bg-gradient-to-b from-violet-50 to-white px-5 py-6 text-center shadow-sm transition-all hover:border-violet-400 hover:shadow-lg"
+					onclick={() => v6SelectOutput('emails')}
+				>
+					<div class="flex h-12 w-12 items-center justify-center rounded-xl bg-violet-100 transition-colors group-hover:bg-violet-200">
+						<span class="material-icons-round text-violet-700 text-2xl">email</span>
+					</div>
+					<div>
+						<p class="text-grey-900 text-sm font-bold">Find Emails</p>
+						<p class="text-grey-500 mt-0.5 text-xs">Professional emails for your contacts</p>
+					</div>
+				</button>
+
+				<button
+					class="group flex flex-col items-center gap-3 rounded-2xl border-2 border-blue-200 bg-gradient-to-b from-blue-50 to-white px-5 py-6 text-center shadow-sm transition-all hover:border-blue-400 hover:shadow-lg"
+					onclick={() => v6SelectOutput('phones')}
+				>
+					<div class="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100 transition-colors group-hover:bg-blue-200">
+						<span class="material-icons-round text-blue-700 text-2xl">phone</span>
+					</div>
+					<div>
+						<p class="text-grey-900 text-sm font-bold">Find Phones</p>
+						<p class="text-grey-500 mt-0.5 text-xs">Direct phone numbers</p>
+					</div>
+				</button>
+
+				<button
+					class="group flex flex-col items-center gap-3 rounded-2xl border-2 border-teal-200 bg-gradient-to-b from-teal-50 to-white px-5 py-6 text-center shadow-sm transition-all hover:border-teal-400 hover:shadow-lg"
+					onclick={() => v6SelectOutput('reverse')}
+				>
+					<div class="relative flex h-12 w-12 items-center justify-center rounded-xl bg-teal-100 transition-colors group-hover:bg-teal-200">
+						<span class="material-icons-round text-teal-700 text-2xl">swap_horiz</span>
+					</div>
+					<div>
+						<p class="text-grey-900 text-sm font-bold">Reverse Enrich</p>
+						<p class="text-grey-500 mt-0.5 text-xs">Have emails? Get full profiles</p>
+					</div>
+					<span class="rounded-full bg-teal-600 px-2 py-0.5 text-[10px] font-semibold text-white">New</span>
+				</button>
+
+				<button
+					class="group flex flex-col items-center gap-3 rounded-2xl border-2 border-amber-200 bg-gradient-to-b from-amber-50 to-white px-5 py-6 text-center shadow-sm transition-all hover:border-amber-400 hover:shadow-lg"
+					onclick={() => v6SelectOutput('all')}
+				>
+					<div class="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-100 transition-colors group-hover:bg-amber-200">
+						<span class="material-icons-round text-amber-700 text-2xl">auto_awesome</span>
+					</div>
+					<div>
+						<p class="text-grey-900 text-sm font-bold">Full Enrichment</p>
+						<p class="text-grey-500 mt-0.5 text-xs">Emails + Phones in one go</p>
+					</div>
+				</button>
 			</div>
 
 			<!-- Status filters -->
@@ -404,14 +443,24 @@
 	</div>
 </div>
 
-<!-- ── New enrichment modal ─────────────────────────────────────────── -->
+<!-- ── Enrichment modal (output-first flow) ────────────────────────── -->
 {#if v6ModalOpen}
 	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
 		<div class="relative w-full max-w-2xl rounded-2xl bg-white shadow-2xl overflow-hidden">
 			<!-- Modal header -->
 			<div class="flex items-center justify-between border-b border-grey-100 px-6 py-4">
 				<div class="flex items-center gap-3">
-					<h2 class="text-grey-900 text-lg font-semibold">Configure enrichment</h2>
+					{#if v6ModalStep === 2 && v6OutputType !== 'reverse'}
+						<button class="btn-ghost flex h-8 w-8 items-center justify-center rounded-lg p-0" onclick={() => { v6ModalStep = 1; v6ModalMode = ''; }}>
+							<span class="material-icons-round text-grey-600 text-lg">arrow_back</span>
+						</button>
+					{/if}
+					<h2 class="text-grey-900 text-lg font-semibold">
+						{v6OutputType === 'emails' ? 'Find Emails' : v6OutputType === 'phones' ? 'Find Phones' : v6OutputType === 'reverse' ? 'Reverse Enrich' : 'Full Enrichment'}
+					</h2>
+					{#if v6ModalStep === 1}
+						<span class="text-grey-400 text-sm">— How will you provide contacts?</span>
+					{/if}
 				</div>
 				<button class="btn-ghost flex h-8 w-8 items-center justify-center rounded-lg p-0" onclick={() => { v6ModalOpen = false; }}>
 					<span class="material-icons-round text-grey-500 text-lg">close</span>
@@ -419,32 +468,56 @@
 			</div>
 
 			<div class="p-6">
-				{#if v6ModalStep === 2}
-					<!-- Enrichment types + mode-specific input -->
-					<!-- Enrichment type checkboxes -->
-					<p class="text-grey-600 mb-3 text-sm font-medium">What to find?</p>
-					<div class="mb-5 flex gap-3">
-						<label class="flex h-11 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border text-sm font-medium transition-all {v6WantProfEmail ? 'border-violet-300 bg-violet-50 text-violet-800 shadow-sm' : 'border-grey-200 text-grey-600 hover:border-grey-300'}">
-							<input type="checkbox" class="sr-only" bind:checked={v6WantProfEmail} />
-							<span class="material-icons-round text-base">email</span>
-							Professional email
-						</label>
-						<label class="flex h-11 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border text-sm font-medium transition-all {v6WantPhone ? 'border-violet-300 bg-violet-50 text-violet-800 shadow-sm' : 'border-grey-200 text-grey-600 hover:border-grey-300'}">
-							<input type="checkbox" class="sr-only" bind:checked={v6WantPhone} />
-							<span class="material-icons-round text-base">phone</span>
-							Phone
-						</label>
-						<label class="flex h-11 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border text-sm font-medium transition-all {v6WantPersonalEmail ? 'border-pink-300 bg-pink-50 text-pink-800 shadow-sm' : 'border-grey-200 text-grey-600 hover:border-grey-300'}">
-							<input type="checkbox" class="sr-only" bind:checked={v6WantPersonalEmail} />
-							<span class="material-icons-round text-base">person</span>
-							Personal email
-						</label>
+				{#if v6ModalStep === 1}
+					<!-- Step 1: Pick input method -->
+					<div class="grid grid-cols-2 gap-3">
+						{#each [
+							{ mode: 'csv', icon: 'upload_file', label: 'Upload a CSV', sub: 'up to 64,000 contacts' },
+							{ mode: 'manual', icon: 'edit_note', label: 'Add manually', sub: 'name + company or LinkedIn URL' },
+							{ mode: 'crm', icon: 'hub', label: 'From my CRM', sub: 'enrich HubSpot lists' },
+							{ mode: 'list', icon: 'format_list_bulleted', label: 'From a list', sub: 'enrich an existing FullEnrich list' },
+						] as opt}
+							<button
+								class="border-grey-200 hover:border-violet-300 hover:bg-violet-50/40 flex items-center gap-4 rounded-xl border bg-white p-4 text-left shadow-sm transition-all"
+								onclick={() => v6SelectMode(opt.mode as typeof v6ModalMode)}
+							>
+								<div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-violet-50">
+									<span class="material-icons-round text-violet-600 text-xl">{opt.icon}</span>
+								</div>
+								<div>
+									<p class="text-grey-900 text-sm font-semibold">{opt.label}</p>
+									<p class="text-grey-500 text-xs">{opt.sub}</p>
+								</div>
+							</button>
+						{/each}
 					</div>
 
-					<!-- Mode-specific input placeholder -->
-					<p class="text-grey-600 mb-3 text-sm font-medium">
-						{v6ModalMode === 'csv' ? 'Upload your file' : v6ModalMode === 'manual' ? 'Enter contacts' : v6ModalMode === 'reverse' ? 'Paste emails' : v6ModalMode === 'crm' ? 'Select HubSpot list' : 'Select list'}
-					</p>
+				{:else}
+					<!-- Step 2: Input form + enrichment type summary + launch -->
+
+					<!-- Enrichment type summary (editable) -->
+					<div class="mb-5 flex items-center gap-2">
+						<span class="text-grey-500 text-xs font-medium uppercase tracking-wider">Finding:</span>
+						<div class="flex gap-2">
+							<label class="flex h-8 cursor-pointer items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-all {v6WantProfEmail ? 'border-violet-300 bg-violet-50 text-violet-700' : 'border-grey-200 text-grey-500 hover:border-grey-300'}">
+								<input type="checkbox" class="sr-only" bind:checked={v6WantProfEmail} />
+								<span class="material-icons-round text-sm">email</span>
+								Pro email
+							</label>
+							<label class="flex h-8 cursor-pointer items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-all {v6WantPhone ? 'border-blue-300 bg-blue-50 text-blue-700' : 'border-grey-200 text-grey-500 hover:border-grey-300'}">
+								<input type="checkbox" class="sr-only" bind:checked={v6WantPhone} />
+								<span class="material-icons-round text-sm">phone</span>
+								Phone
+							</label>
+							<label class="flex h-8 cursor-pointer items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-all {v6WantPersonalEmail ? 'border-pink-300 bg-pink-50 text-pink-700' : 'border-grey-200 text-grey-500 hover:border-grey-300'}">
+								<input type="checkbox" class="sr-only" bind:checked={v6WantPersonalEmail} />
+								<span class="material-icons-round text-sm">person</span>
+								Personal
+							</label>
+						</div>
+					</div>
+
+					<!-- Mode-specific input -->
 					{#if v6ModalMode === 'csv'}
 						<div class="border-grey-300 flex flex-col items-center justify-center rounded-xl border-2 border-dashed px-8 py-12 transition-colors hover:border-violet-300 hover:bg-violet-50/20">
 							<span class="material-icons-round text-grey-400 text-4xl">cloud_upload</span>
@@ -468,11 +541,13 @@
 							</button>
 						</div>
 					{:else if v6ModalMode === 'reverse'}
+						<p class="text-grey-600 mb-3 text-sm font-medium">Paste emails to reverse</p>
 						<textarea
 							class="input h-28 w-full resize-none text-sm font-mono"
 							placeholder="sarah@stripe.com&#10;james@hubspot.com&#10;emma@datadog.com"
 						></textarea>
 					{:else if v6ModalMode === 'crm'}
+						<p class="text-grey-600 mb-3 text-sm font-medium">Select HubSpot list</p>
 						<div class="flex flex-col gap-2">
 							{#each ['Newsletter signups', 'Cold leads 2025', 'Trial users May'] as listName}
 								<label class="flex cursor-pointer items-center gap-3 rounded-xl border border-grey-200 px-4 py-3 hover:border-violet-300 hover:bg-violet-50/30 transition-colors">
@@ -482,6 +557,7 @@
 							{/each}
 						</div>
 					{:else}
+						<p class="text-grey-600 mb-3 text-sm font-medium">Select list</p>
 						<div class="flex flex-col gap-2">
 							{#each v6PeopleLists as list}
 								<label class="flex cursor-pointer items-center gap-3 rounded-xl border border-grey-200 px-4 py-3 hover:border-violet-300 hover:bg-violet-50/30 transition-colors">

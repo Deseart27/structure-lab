@@ -4,7 +4,7 @@
 	let version = $derived($page.params.version);
 </script>
 
-{#if version === 'v6'}
+{#if version === 'v6' || version === 'v7'}
 	<section class="page m-2 flex rounded-3xl">
 		<main class="flex w-full flex-col overflow-hidden rounded-2xl border border-grey-200 bg-white" style="height: calc(100vh - 72px - 40px - 16px);">
 			{@render children()}

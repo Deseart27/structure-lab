@@ -36,7 +36,7 @@
 	}
 </script>
 
-{#if version === 'v6'}
+{#if version === 'v6' || version === 'v7'}
 	{#if company}
 		<div class="flex h-full flex-col">
 			<!-- Header -->

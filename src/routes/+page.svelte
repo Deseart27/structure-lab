@@ -7,6 +7,7 @@
 		{ id: 'v3', name: "Version 3 — Lusha's Model", desc: 'All Contacts + Lists. Enriched contacts flow into a global contact database.', entry: 'search' },
 		{ id: 'v4', name: 'Version 4 — Find, Enrich, Push', desc: 'Unified lists, universal Export action, optional list organization. Enrichment from search goes to a list; CSV/manual enrichments are standalone jobs.', entry: 'search' },
 		{ id: 'v6', name: 'Version 6 — Jobs + Parallel Lists', desc: 'Jobs table + parallel Lists. One launcher, universal export, company bundles.', entry: 'search' },
+		{ id: 'v7', name: 'Version 7 — Lists Only', desc: 'Lists as the single object. Enrichment is a launcher + activity feed. Results always flow into lists. Onboarding routes you to the right section.', entry: 'search' },
 	];
 </script>
 

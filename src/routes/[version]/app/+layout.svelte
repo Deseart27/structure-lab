@@ -25,7 +25,7 @@
 <div class="flex min-h-screen min-w-screen flex-col bg-white">
 	<Navbar />
 	<div class="flex flex-1 items-center justify-center">
-		<div class="mx-4 w-full max-w-3xl text-center">
+		<div class="mx-4 w-full max-w-4xl text-center">
 			<div class="mb-2 flex justify-center">
 				<span class="inline-flex items-center rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold text-violet-700">Last step</span>
 			</div>
@@ -41,10 +41,10 @@
 					<div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-violet-100 transition-colors group-hover:bg-violet-200">
 						<span class="material-icons-round text-violet-700 text-2xl">person_search</span>
 					</div>
-					<div>
+					<div class="min-w-0 flex-1">
 						<p class="text-grey-900 text-base font-bold">Find new leads</p>
 						<p class="text-grey-500 mt-1 text-sm">Search our database of 700M+ contacts by company, title, location and more.</p>
-						<div class="mt-3 flex items-center gap-1.5">
+						<div class="mt-3 flex flex-wrap items-center gap-1">
 							<span class="text-grey-400 text-[10px] uppercase tracking-wider font-medium">via</span>
 							<span class="inline-flex items-center gap-1 rounded-full bg-grey-100 px-2 py-0.5 text-[10px] font-medium text-grey-500">
 								<span class="material-icons-round text-[10px]">search</span>
@@ -66,10 +66,10 @@
 					<div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-100 transition-colors group-hover:bg-blue-200">
 						<span class="material-icons-round text-blue-700 text-2xl">auto_awesome</span>
 					</div>
-					<div>
+					<div class="min-w-0 flex-1">
 						<p class="text-grey-900 text-base font-bold">Find emails & phones</p>
 						<p class="text-grey-500 mt-1 text-sm">Upload a file, enter names manually, or pull from your CRM — we'll find verified emails and direct dials.</p>
-						<div class="mt-3 flex items-center gap-1.5">
+						<div class="mt-3 flex flex-wrap items-center gap-1">
 							<span class="text-grey-400 text-[10px] uppercase tracking-wider font-medium">from</span>
 							<span class="inline-flex items-center gap-1 rounded-full bg-grey-100 px-2 py-0.5 text-[10px] font-medium text-grey-500">
 								<span class="material-icons-round text-[10px]">upload_file</span>
@@ -99,10 +99,10 @@
 					<div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-teal-100 transition-colors group-hover:bg-teal-200">
 						<span class="material-icons-round text-teal-700 text-2xl">swap_horiz</span>
 					</div>
-					<div>
+					<div class="min-w-0 flex-1">
 						<p class="text-grey-900 text-base font-bold">Reverse enrich my data</p>
 						<p class="text-grey-500 mt-1 text-sm">Have emails already? Get full profiles — name, title, company, LinkedIn, phone.</p>
-						<div class="mt-3 flex items-center gap-1.5">
+						<div class="mt-3 flex flex-wrap items-center gap-1">
 							<span class="text-grey-400 text-[10px] uppercase tracking-wider font-medium">from</span>
 							<span class="inline-flex items-center gap-1 rounded-full bg-grey-100 px-2 py-0.5 text-[10px] font-medium text-grey-500">
 								<span class="material-icons-round text-[10px]">upload_file</span>
@@ -129,10 +129,10 @@
 					<div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-amber-100 transition-colors group-hover:bg-amber-200">
 						<span class="material-icons-round text-amber-700 text-2xl">hub</span>
 					</div>
-					<div>
+					<div class="min-w-0 flex-1">
 						<p class="text-grey-900 text-base font-bold">Enrich my CRM</p>
 						<p class="text-grey-500 mt-1 text-sm">Connect your CRM and keep your contacts enriched automatically.</p>
-						<div class="mt-3 flex items-center gap-1.5">
+						<div class="mt-3 flex flex-wrap items-center gap-1">
 							<span class="text-grey-400 text-[10px] uppercase tracking-wider font-medium">supports</span>
 							<span class="inline-flex items-center gap-1 rounded-full bg-grey-100 px-2 py-0.5 text-[10px] font-medium text-grey-500">
 								<svg class="h-2.5 w-2.5 shrink-0" viewBox="0 0 1024 1024"><circle cx="512" cy="512" r="512" fill="#FF7A59"/><path d="M623.8 624.94c-38.23 0-69.24-30.67-69.24-68.51s31-68.52 69.24-68.52 69.26 30.67 69.26 68.52-31 68.51-69.26 68.51m20.74-200.42v-61a46.83 46.83 0 0 0 27.33-42.29v-1.41c0-25.78-21.32-46.86-47.35-46.86h-1.43c-26 0-47.35 21.09-47.35 46.86v1.41a46.85 46.85 0 0 0 27.33 42.29v61a135.08 135.08 0 0 0-63.86 27.79l-169.1-130.17A52.49 52.49 0 0 0 372 309c0-29.21-23.89-52.92-53.4-53s-53.45 23.59-53.48 52.81 23.85 52.88 53.36 52.93a53.29 53.29 0 0 0 26.33-7.09l166.38 128.1a132.14 132.14 0 0 0 2.07 150.3l-50.62 50.1A43.42 43.42 0 1 0 450.1 768c24.24 0 43.9-19.46 43.9-43.45a42.24 42.24 0 0 0-2-12.42l50-49.52a135.28 135.28 0 0 0 81.8 27.47c74.61 0 135.06-59.83 135.06-133.65 0-66.82-49.62-122-114.33-131.91" fill="#fff" fill-rule="evenodd"/></svg>

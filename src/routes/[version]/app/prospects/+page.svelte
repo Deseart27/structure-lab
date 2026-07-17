@@ -642,6 +642,191 @@
 	</div>
 </div>
 
+{:else if version === 'v8'}
+<!-- V8: Lists with auto-created provenance -->
+<div class="flex h-full flex-col">
+	<div class="border-grey-200 flex h-14 shrink-0 items-center justify-between border-b px-6">
+		<div class="flex items-center gap-3">
+			<h1 class="text-grey-900 text-base font-semibold">Lists</h1>
+			<span class="text-grey-500 text-sm">{v6Lists.length} lists</span>
+		</div>
+		<button class="btn-primary h-8 gap-1.5 px-3 text-sm" onclick={() => { v6NewListOpen = true; }}>
+			<span class="material-icons-round text-sm text-white">add</span>
+			New list
+		</button>
+	</div>
+
+	<!-- New list modal -->
+	{#if v6NewListOpen}
+		<button class="fixed inset-0 z-40 bg-black/20" onclick={() => { v6NewListOpen = false; }} aria-label="Close modal"></button>
+		<div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+			<div class="w-full max-w-sm rounded-2xl border border-grey-200 bg-white p-6 shadow-xl">
+				<h2 class="text-grey-900 mb-4 text-base font-semibold">New list</h2>
+				<label class="mb-3 block">
+					<span class="text-grey-700 mb-1 block text-sm font-medium">Name</span>
+					<input
+						type="text"
+						class="border-grey-300 text-grey-900 w-full rounded-lg border px-3 py-2 text-sm focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500"
+						placeholder="e.g. Q3 Targets"
+						bind:value={v6NewListName}
+					/>
+				</label>
+				<fieldset class="mb-5">
+					<legend class="text-grey-700 mb-1 block text-sm font-medium">Type</legend>
+					<div class="flex gap-3">
+						<label class="flex cursor-pointer items-center gap-2 text-sm text-grey-800">
+							<input type="radio" name="v8-list-type" value="people" bind:group={v6NewListType} class="accent-violet-700" />
+							People list
+						</label>
+						<label class="flex cursor-pointer items-center gap-2 text-sm text-grey-800">
+							<input type="radio" name="v8-list-type" value="company" bind:group={v6NewListType} class="accent-violet-700" />
+							Company list
+						</label>
+					</div>
+				</fieldset>
+				<div class="flex justify-end gap-2">
+					<button class="btn-ghost h-8 px-4 text-sm" onclick={() => { v6NewListOpen = false; }}>Cancel</button>
+					<button class="btn-primary h-8 px-4 text-sm" onclick={v6CreateList}>Create</button>
+				</div>
+			</div>
+		</div>
+	{/if}
+
+	<div class="flex-1 overflow-auto">
+		<table class="w-full min-w-[960px]">
+			<thead class="sticky top-0 z-10">
+				<tr class="table-header">
+					<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Type</th>
+					<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Name</th>
+					<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Count</th>
+					<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Enrichment</th>
+					<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Sources</th>
+					<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Owner</th>
+					<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Updated</th>
+					<th class="text-grey-600 px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider">Actions</th>
+				</tr>
+			</thead>
+			<tbody class="bg-white">
+				{#each v6Lists as list}
+					{@const listRuns = v6Store.getRunsForList(list.id)}
+					{@const activeRun = listRuns.find(r => r.status === 'running')}
+					<tr class="border-grey-100 hover:bg-grey-50 border-b transition-colors {activeRun ? 'bg-amber-50/20' : ''}">
+						<!-- Type badge -->
+						<td class="px-4 py-3">
+							{#if list.type === 'people'}
+								<span class="inline-flex items-center rounded-full bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-700">People</span>
+							{:else}
+								<span class="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">Company</span>
+							{/if}
+						</td>
+						<!-- Name + auto-created provenance -->
+						<td class="px-4 py-3">
+							<div class="flex items-center gap-2">
+								<a href="{svelteBase}/{$page.params.version}/app/prospects/{list.id}" class="text-grey-900 text-sm font-medium hover:text-violet-700">{list.name}</a>
+								{#if list.autoCreated}
+									<span class="inline-flex items-center gap-1 rounded-full border border-dashed border-grey-300 px-1.5 py-0.5 text-[10px] text-grey-400" title="Auto-created from {list.autoCreatedFrom?.name ?? 'enrichment'}">
+										<span class="material-icons-round text-[10px]">auto_awesome</span>
+										auto
+									</span>
+								{/if}
+							</div>
+							{#if list.autoCreated && list.autoCreatedFrom}
+								<p class="text-grey-400 mt-0.5 text-xs">
+									From {list.autoCreatedFrom.type === 'csv' ? 'CSV' : list.autoCreatedFrom.type === 'search' ? 'Search' : 'Enrichment'}: {list.autoCreatedFrom.name}
+								</p>
+							{/if}
+						</td>
+						<!-- Count -->
+						<td class="text-grey-700 px-4 py-3 text-sm">{list.memberIds.length}</td>
+						<!-- Enrichment status -->
+						<td class="px-4 py-3">
+							{#if activeRun}
+								<div class="flex items-center gap-2">
+									<span class="material-icons-round text-amber-500 text-sm animate-spin" style="animation-duration:1.5s">sync</span>
+									<div class="flex items-center gap-1.5">
+										<div class="bg-grey-200 h-1.5 w-14 overflow-hidden rounded-full">
+											<div class="h-full rounded-full bg-amber-400" style:width="{activeRun.progress}%"></div>
+										</div>
+										<span class="text-amber-700 text-xs font-medium">{activeRun.progress}%</span>
+									</div>
+								</div>
+							{:else if list.type === 'people' && list.enrichedPercent > 0}
+								<div class="flex items-center gap-2">
+									<div class="bg-grey-200 h-1.5 w-14 overflow-hidden rounded-full">
+										<div class="h-full rounded-full bg-emerald-500" style:width="{list.enrichedPercent}%"></div>
+									</div>
+									<span class="text-grey-600 text-xs">{list.enrichedPercent}%</span>
+									{#if listRuns.length > 0}
+										<span class="text-grey-400 text-xs">· {listRuns.length} run{listRuns.length > 1 ? 's' : ''}</span>
+									{/if}
+								</div>
+							{:else if list.type === 'people'}
+								<span class="text-grey-400 text-xs">Not enriched</span>
+							{:else}
+								<span class="text-grey-300 text-xs">—</span>
+							{/if}
+						</td>
+						<!-- Sources -->
+						<td class="px-4 py-3">
+							<div class="flex flex-wrap gap-1">
+								{#each list.sources as src}
+									{#if v6SourceBadge[src]}
+										<span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium {v6SourceBadge[src].color}">{v6SourceBadge[src].label}</span>
+									{/if}
+								{/each}
+							</div>
+						</td>
+						<!-- Owner -->
+						<td class="text-grey-700 px-4 py-3 text-sm">{list.owner}</td>
+						<!-- Updated -->
+						<td class="text-grey-500 px-4 py-3 text-sm">{list.updatedAt}</td>
+						<!-- Actions -->
+						<td class="px-4 py-3 text-right">
+							<div class="flex items-center justify-end gap-1">
+								{#if list.type === 'people'}
+									<a
+										href="{svelteBase}/{$page.params.version}/app/enrich"
+										class="btn-ghost h-7 gap-1 px-2 text-xs"
+										title="Enrich this list"
+									>
+										<span class="material-icons-round text-violet-500 text-base">auto_awesome</span>
+										Enrich
+									</a>
+								{/if}
+								<div class="relative">
+									<button
+										class="btn-ghost h-7 w-7 p-0"
+										title="Export"
+										onclick={() => {
+											if (v6ExportOpenId === list.id) {
+												v6ExportOpenId = '';
+												v6ExportBool = false;
+											} else {
+												v6ExportOpenId = list.id;
+												v6ExportBool = true;
+											}
+										}}
+									>
+										<span class="material-icons-round text-grey-500 text-base">download</span>
+									</button>
+									{#if v6ExportOpenId === list.id}
+										<ExportPopover
+											bind:open={v6ExportBool}
+											context={list.type === 'people' ? 'people' : 'companies'}
+											count={list.memberIds.length}
+											sourceName={list.name}
+										/>
+									{/if}
+								</div>
+							</div>
+						</td>
+					</tr>
+				{/each}
+			</tbody>
+		</table>
+	</div>
+</div>
+
 {:else}
 <!-- V1/V2: Lists view -->
 <div class="flex h-full flex-col">

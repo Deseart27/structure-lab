@@ -89,7 +89,7 @@
 <div class="flex h-full flex-col">
 	<div class="border-grey-200 flex h-14 shrink-0 items-center justify-between border-b px-6">
 		<div class="flex items-center gap-3">
-			<h2 class="text-grey-900 text-base font-semibold">{version === 'v6' || version === 'v7' ? v6Companies.length : companies.length} companies</h2>
+			<h2 class="text-grey-900 text-base font-semibold">{version === 'v6' || version === 'v7' || version === 'v8' ? v6Companies.length : companies.length} companies</h2>
 		</div>
 		<div class="flex items-center gap-2">
 			{#if version === 'v4'}
@@ -124,7 +124,7 @@
 					<span class="material-icons-round text-sm text-white">group</span>
 					Find employees
 				</button>
-			{:else if version === 'v6' || version === 'v7'}
+			{:else if version === 'v6' || version === 'v7' || version === 'v8'}
 				{#if v6SomeChecked}
 					<span class="text-grey-500 text-sm">{v6Selected.size} selected</span>
 					<button
@@ -201,7 +201,7 @@
 	</div>
 
 	<div class="bg-grey-50 flex-1 overflow-auto">
-		{#if version === 'v6' || version === 'v7'}
+		{#if version === 'v6' || version === 'v7' || version === 'v8'}
 			<table class="w-full min-w-[800px]">
 				<thead class="sticky top-0 z-10">
 					<tr class="table-header">

@@ -185,7 +185,7 @@
 					<span class="material-icons-round text-sm text-white">auto_awesome</span>
 					Enrich
 				</button>
-			{:else if version === 'v6' || version === 'v7'}
+			{:else if version === 'v6' || version === 'v7' || version === 'v8'}
 				{#if v6Selected.size > 0}
 					<span class="text-grey-500 mr-1 text-sm">{v6Selected.size} selected</span>
 				{/if}
@@ -287,7 +287,7 @@
 		</div>
 	</div>
 
-	{#if version === 'v6' || version === 'v7'}
+	{#if version === 'v6' || version === 'v7' || version === 'v8'}
 		<!-- V6/V7 search query chip -->
 		<div class="border-grey-100 flex shrink-0 items-center gap-2 border-b px-6 py-2.5">
 			<span class="text-grey-500 text-xs font-semibold uppercase tracking-wider">Search</span>

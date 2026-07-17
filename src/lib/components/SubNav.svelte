@@ -56,7 +56,7 @@
 
 	// V3: same search sub-nav as v2, adds Lists sub-nav (Lists | All Contacts)
 	let sections = $derived<SectionConfig[]>(
-		version === 'v6' || version === 'v7'
+		version === 'v6' || version === 'v7' || version === 'v8'
 			? v6Sections
 			: version === 'v3'
 			? [

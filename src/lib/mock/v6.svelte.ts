@@ -38,6 +38,8 @@ export interface V6List {
 	updatedAt: string;
 	enrichedPercent: number;
 	enrichmentStatus?: 'enriching' | 'idle';
+	autoCreated?: boolean;
+	autoCreatedFrom?: { type: 'enrichment' | 'search' | 'csv'; name: string };
 }
 
 export interface Company {
@@ -141,8 +143,10 @@ let jobs = $state<Job[]>([
 let lists = $state<V6List[]>([
 	{ id: 'l1', type: 'people', name: 'Q3 Targets', memberIds: ['c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c9'], sources: ['search', 'csv'], owner: 'Francis', updatedAt: '1 hour ago', enrichedPercent: 86, enrichmentStatus: 'idle' },
 	{ id: 'l2', type: 'company', name: 'ABM - Fintech FR', memberIds: ['comp1', 'comp3', 'comp5', 'comp8'], sources: ['search'], owner: 'Francis', updatedAt: '2 days ago', enrichedPercent: 0, enrichmentStatus: 'idle' },
-	{ id: 'l3', type: 'people', name: 'Webinar attendees', memberIds: ['c16', 'c17', 'c18'], sources: ['reverse'], owner: 'Marie', updatedAt: '1 day ago', enrichedPercent: 100, enrichmentStatus: 'idle' },
+	{ id: 'l3', type: 'people', name: 'Webinar attendees', memberIds: ['c16', 'c17', 'c18'], sources: ['reverse'], owner: 'Marie', updatedAt: '1 day ago', enrichedPercent: 100, enrichmentStatus: 'idle', autoCreated: true, autoCreatedFrom: { type: 'enrichment', name: 'Reverse — webinar signups' } },
 	{ id: 'l4', type: 'people', name: 'Sales Leaders DACH', memberIds: ['c6', 'c7', 'c8', 'c15'], sources: ['search', 'manual'], owner: 'Francis', updatedAt: '5 days ago', enrichedPercent: 75, enrichmentStatus: 'enriching' },
+	{ id: 'l5', type: 'people', name: 'VP Sales · SaaS · France — Jul 14', memberIds: ['c1', 'c3', 'c4'], sources: ['search'], owner: 'Francis', updatedAt: '3 days ago', enrichedPercent: 100, enrichmentStatus: 'idle', autoCreated: true, autoCreatedFrom: { type: 'search', name: 'VP Sales · SaaS · France' } },
+	{ id: 'l6', type: 'people', name: 'leads_q3.csv', memberIds: ['c1', 'c2', 'c3', 'c4', 'c5', 'c9', 'c10', 'c11', 'c12', 'c13', 'c14', 'c15'], sources: ['csv'], owner: 'Francis', updatedAt: '2 hours ago', enrichedPercent: 86, enrichmentStatus: 'idle', autoCreated: true, autoCreatedFrom: { type: 'csv', name: 'leads_q3.csv' } },
 ]);
 
 // --- Companies ---
@@ -168,6 +172,8 @@ let runs = $state<EnrichmentRun[]>([
 	{ id: 'r3', listId: 'l1', listName: 'Q3 Targets', outputType: 'all', inputMethod: 'csv', contactsCount: 156, found: 72, status: 'completed', progress: 100, startedAt: '1 day ago' },
 	{ id: 'r4', listId: 'l3', listName: 'Webinar attendees', outputType: 'reverse', inputMethod: 'csv', contactsCount: 67, found: 52, status: 'completed', progress: 100, startedAt: '2 days ago' },
 	{ id: 'r5', listId: 'l4', listName: 'Sales Leaders DACH', outputType: 'emails', inputMethod: 'manual', contactsCount: 12, found: 0, status: 'queued', progress: 0, startedAt: '5 min ago' },
+	{ id: 'r6', listId: 'l5', listName: 'VP Sales · SaaS · France — Jul 14', outputType: 'emails', inputMethod: 'search', contactsCount: 3, found: 3, status: 'completed', progress: 100, startedAt: '3 days ago' },
+	{ id: 'r7', listId: 'l6', listName: 'leads_q3.csv', outputType: 'all', inputMethod: 'csv', contactsCount: 12, found: 10, status: 'completed', progress: 100, startedAt: '2 hours ago' },
 ]);
 
 // --- Pushes ---

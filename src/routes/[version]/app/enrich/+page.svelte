@@ -181,6 +181,62 @@
 		toast.show(`Enrichment started — results will appear in "${targetList.name}"`);
 	}
 
+	// ── V8 state ────────────────────────────────────────────────────────────
+	let v8Runs = $derived(v6Store.runs);
+
+	let v8ModalOpen = $state(false);
+	let v8ModalStep = $state<1 | 2>(1);
+	let v8ModalMode = $state<'csv' | 'manual' | 'reverse' | 'crm' | 'list' | ''>('');
+	let v8OutputType = $state<'emails' | 'phones' | 'reverse' | 'all'>('emails');
+	let v8WantProfEmail = $state(true);
+	let v8WantPhone = $state(false);
+	let v8WantPersonalEmail = $state(false);
+	let v8TargetList = $state('');
+
+	function v8SelectOutput(output: typeof v8OutputType) {
+		v8OutputType = output;
+		v8ModalMode = output === 'reverse' ? 'reverse' : '';
+		v8ModalStep = output === 'reverse' ? 2 : 1;
+		v8ModalOpen = true;
+		v8WantProfEmail = output === 'emails' || output === 'all';
+		v8WantPhone = output === 'phones' || output === 'all';
+		v8WantPersonalEmail = false;
+		v8TargetList = '';
+	}
+
+	function v8SelectMode(m: string) {
+		v8ModalMode = m as typeof v8ModalMode;
+		v8ModalStep = 2;
+	}
+
+	function v8Launch() {
+		v8ModalOpen = false;
+		const isExistingList = v8TargetList !== '' && v8TargetList !== '__new__';
+		const targetList = isExistingList
+			? v6Store.lists.find(l => l.id === v8TargetList)
+			: null;
+		const autoName = v8ModalMode === 'csv' ? 'leads_import.csv' : 'Search results — Jul 17';
+		const listName = targetList ? targetList.name : autoName;
+		const newRunId = `r${Date.now()}`;
+		v6Store.addRun({
+			id: newRunId,
+			listId: targetList?.id ?? `l${Date.now()}`,
+			listName,
+			outputType: v8OutputType,
+			inputMethod: v8ModalMode === '' ? 'csv' : v8ModalMode as any,
+			contactsCount: 0,
+			found: 0,
+			status: 'running',
+			progress: 0,
+			startedAt: 'Just now',
+		});
+		if (isExistingList) {
+			toast.show(`Enrichment started on "${listName}"`);
+		} else {
+			toast.show(`List "${listName}" created — enrichment started`);
+		}
+	}
+
 	let mode: '' | 'csv' | 'manual' | 'list' = $state('');
 	let wantPhone = $state(true);
 	let wantEmail = $state(true);
@@ -916,6 +972,325 @@
 					<!-- Launch -->
 					<div class="mt-5 flex justify-end">
 						<button class="btn-primary h-10 gap-2 px-5 text-sm font-semibold" onclick={v7Launch}>
+							<span class="material-icons-round text-sm text-white">auto_awesome</span>
+							Launch enrichment
+						</button>
+					</div>
+				{/if}
+			</div>
+		</div>
+	</div>
+{/if}
+{:else if version === 'v8'}
+<!-- V8 Enrichment — Launcher + Activity Feed (auto-created lists) -->
+<div class="flex h-full flex-col overflow-auto">
+	<div class="flex justify-center pt-14 pb-20">
+		<div class="mx-8 w-full max-w-[1100px]">
+
+			<!-- Header -->
+			<div class="flex items-center justify-between gap-4 pb-2">
+				<div>
+					<h1 class="text-grey-900 text-2xl font-semibold">Enrichment</h1>
+					<p class="text-grey-500 mt-1 text-sm">Choose what you need, provide contacts. Results auto-create a list or flow into one you pick.</p>
+				</div>
+			</div>
+
+			<!-- Output-first CTAs -->
+			<div class="grid grid-cols-4 gap-3 pt-6 pb-10">
+				<button
+					class="group flex flex-col items-center gap-3 rounded-2xl border-2 border-violet-200 bg-gradient-to-b from-violet-50 to-white px-5 py-6 text-center shadow-sm transition-all hover:border-violet-400 hover:shadow-lg"
+					onclick={() => v8SelectOutput('emails')}
+				>
+					<div class="flex h-12 w-12 items-center justify-center rounded-xl bg-violet-100 transition-colors group-hover:bg-violet-200">
+						<span class="material-icons-round text-violet-700 text-2xl">email</span>
+					</div>
+					<div>
+						<p class="text-grey-900 text-sm font-bold">Find Emails</p>
+						<p class="text-grey-500 mt-0.5 text-xs">Professional emails for your contacts</p>
+					</div>
+				</button>
+
+				<button
+					class="group flex flex-col items-center gap-3 rounded-2xl border-2 border-blue-200 bg-gradient-to-b from-blue-50 to-white px-5 py-6 text-center shadow-sm transition-all hover:border-blue-400 hover:shadow-lg"
+					onclick={() => v8SelectOutput('phones')}
+				>
+					<div class="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100 transition-colors group-hover:bg-blue-200">
+						<span class="material-icons-round text-blue-700 text-2xl">phone</span>
+					</div>
+					<div>
+						<p class="text-grey-900 text-sm font-bold">Find Phones</p>
+						<p class="text-grey-500 mt-0.5 text-xs">Direct phone numbers</p>
+					</div>
+				</button>
+
+				<button
+					class="group flex flex-col items-center gap-3 rounded-2xl border-2 border-teal-200 bg-gradient-to-b from-teal-50 to-white px-5 py-6 text-center shadow-sm transition-all hover:border-teal-400 hover:shadow-lg"
+					onclick={() => v8SelectOutput('reverse')}
+				>
+					<div class="relative flex h-12 w-12 items-center justify-center rounded-xl bg-teal-100 transition-colors group-hover:bg-teal-200">
+						<span class="material-icons-round text-teal-700 text-2xl">swap_horiz</span>
+					</div>
+					<div>
+						<p class="text-grey-900 text-sm font-bold">Reverse Enrich</p>
+						<p class="text-grey-500 mt-0.5 text-xs">Have emails? Get full profiles</p>
+					</div>
+					<span class="rounded-full bg-teal-600 px-2 py-0.5 text-[10px] font-semibold text-white">New</span>
+				</button>
+
+				<button
+					class="group flex flex-col items-center gap-3 rounded-2xl border-2 border-amber-200 bg-gradient-to-b from-amber-50 to-white px-5 py-6 text-center shadow-sm transition-all hover:border-amber-400 hover:shadow-lg"
+					onclick={() => v8SelectOutput('all')}
+				>
+					<div class="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-100 transition-colors group-hover:bg-amber-200">
+						<span class="material-icons-round text-amber-700 text-2xl">auto_awesome</span>
+					</div>
+					<div>
+						<p class="text-grey-900 text-sm font-bold">Full Enrichment</p>
+						<p class="text-grey-500 mt-0.5 text-xs">Emails + Phones in one go</p>
+					</div>
+				</button>
+			</div>
+
+			<!-- Recent Activity -->
+			<div class="flex items-center justify-between pb-4">
+				<h2 class="text-grey-900 text-lg font-semibold">Recent activity</h2>
+				<span class="text-grey-400 text-sm">{v8Runs.filter(r => r.status === 'running').length} running</span>
+			</div>
+
+			<div class="list-shell overflow-hidden">
+				{#each v8Runs as run, i}
+					<a
+						href="{base}/app/prospects/{run.listId}"
+						class="grid grid-cols-[1fr_140px_160px_110px_80px] items-center gap-3 px-5 py-4 transition-colors hover:bg-grey-50
+							{i < v8Runs.length - 1 ? 'border-b border-grey-100' : ''}
+							{run.status === 'running' ? 'bg-amber-50/30' : ''}"
+					>
+						<!-- Run info -->
+						<div class="flex items-center gap-3 min-w-0">
+							<div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg
+								{run.outputType === 'emails' ? 'bg-violet-50' : run.outputType === 'phones' ? 'bg-blue-50' : run.outputType === 'reverse' ? 'bg-teal-50' : 'bg-amber-50'}">
+								<span class="material-icons-round text-lg
+									{run.outputType === 'emails' ? 'text-violet-600' : run.outputType === 'phones' ? 'text-blue-600' : run.outputType === 'reverse' ? 'text-teal-600' : 'text-amber-600'}">
+									{run.outputType === 'emails' ? 'email' : run.outputType === 'phones' ? 'phone' : run.outputType === 'reverse' ? 'swap_horiz' : 'auto_awesome'}
+								</span>
+							</div>
+							<div class="min-w-0">
+								<div class="flex items-center gap-2">
+									<span class="text-grey-900 text-sm font-medium truncate">
+										{run.outputType === 'emails' ? 'Find Emails' : run.outputType === 'phones' ? 'Find Phones' : run.outputType === 'reverse' ? 'Reverse Enrich' : 'Full Enrichment'}
+									</span>
+									<span class="text-grey-400 text-xs">on</span>
+									<span class="text-violet-700 text-sm font-medium truncate">{run.listName}</span>
+								</div>
+								<p class="text-grey-500 text-xs mt-0.5">
+									{run.found}/{run.contactsCount} found · via {run.inputMethod.toUpperCase()}
+								</p>
+							</div>
+						</div>
+
+						<!-- Status -->
+						<span class="inline-flex h-6 w-fit items-center rounded-full px-2.5 text-xs font-medium
+							{run.status === 'running' ? 'bg-amber-50 text-amber-700' : run.status === 'queued' ? 'bg-grey-100 text-grey-500' : 'bg-emerald-50 text-emerald-700'}">
+							{run.status === 'running' ? 'Running' : run.status === 'queued' ? 'Queued' : 'Completed'}
+						</span>
+
+						<!-- Progress -->
+						<div class="flex items-center gap-2">
+							<div class="bg-grey-200 h-1.5 flex-1 max-w-[100px] overflow-hidden rounded-full">
+								<div
+									class="h-full rounded-full transition-all
+										{run.status === 'running' ? 'bg-amber-400' : run.status === 'queued' ? 'bg-grey-400' : 'bg-emerald-500'}"
+									style:width="{run.progress}%"
+								></div>
+							</div>
+							<span class="text-grey-500 text-xs w-8 shrink-0">{run.progress}%</span>
+						</div>
+
+						<!-- Date -->
+						<span class="text-grey-400 text-xs">{run.startedAt}</span>
+
+						<!-- Arrow -->
+						<div class="flex justify-end">
+							<span class="material-icons-round text-grey-300 text-base">chevron_right</span>
+						</div>
+					</a>
+				{/each}
+
+				{#if v8Runs.length === 0}
+					<div class="flex flex-col items-center justify-center gap-2 py-16">
+						<span class="material-icons-round text-grey-300 text-4xl">auto_awesome</span>
+						<p class="text-grey-500 text-sm">No enrichment runs yet. Pick an enrichment type above to get started.</p>
+					</div>
+				{/if}
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- V8 Modal — with destination list selector -->
+{#if v8ModalOpen}
+	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+		<div class="relative w-full max-w-2xl rounded-2xl bg-white shadow-2xl overflow-hidden">
+			<!-- Modal header -->
+			<div class="flex items-center justify-between border-b border-grey-100 px-6 py-4">
+				<div class="flex items-center gap-3">
+					{#if v8ModalStep === 2 && v8OutputType !== 'reverse'}
+						<button class="btn-ghost flex h-8 w-8 items-center justify-center rounded-lg p-0" onclick={() => { v8ModalStep = 1; v8ModalMode = ''; }}>
+							<span class="material-icons-round text-grey-600 text-lg">arrow_back</span>
+						</button>
+					{/if}
+					<h2 class="text-grey-900 text-lg font-semibold">
+						{v8OutputType === 'emails' ? 'Find Emails' : v8OutputType === 'phones' ? 'Find Phones' : v8OutputType === 'reverse' ? 'Reverse Enrich' : 'Full Enrichment'}
+					</h2>
+					{#if v8ModalStep === 1}
+						<span class="text-grey-400 text-sm">— How will you provide contacts?</span>
+					{/if}
+				</div>
+				<button class="btn-ghost flex h-8 w-8 items-center justify-center rounded-lg p-0" onclick={() => { v8ModalOpen = false; }}>
+					<span class="material-icons-round text-grey-500 text-lg">close</span>
+				</button>
+			</div>
+
+			<div class="p-6">
+				{#if v8ModalStep === 1}
+					<!-- Step 1: Pick input method -->
+					<div class="grid grid-cols-2 gap-3">
+						{#each [
+							{ mode: 'csv', icon: 'upload_file', label: 'Upload a CSV', sub: 'Creates a list from your file' },
+							{ mode: 'manual', icon: 'edit_note', label: 'Add manually', sub: 'Name + company or LinkedIn URL' },
+							{ mode: 'crm', icon: 'hub', label: 'From my CRM', sub: 'Import and enrich HubSpot contacts' },
+							{ mode: 'list', icon: 'format_list_bulleted', label: 'From a list', sub: 'Enrich an existing list in-place' },
+						] as opt}
+							<button
+								class="border-grey-200 hover:border-violet-300 hover:bg-violet-50/40 flex items-center gap-4 rounded-xl border bg-white p-4 text-left shadow-sm transition-all"
+								onclick={() => v8SelectMode(opt.mode)}
+							>
+								<div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-violet-50">
+									<span class="material-icons-round text-violet-600 text-xl">{opt.icon}</span>
+								</div>
+								<div>
+									<p class="text-grey-900 text-sm font-semibold">{opt.label}</p>
+									<p class="text-grey-500 text-xs">{opt.sub}</p>
+								</div>
+							</button>
+						{/each}
+					</div>
+				{:else}
+					<!-- Step 2 -->
+
+					<!-- What we're finding pills -->
+					<div class="mb-5 flex items-center gap-2">
+						<span class="text-grey-500 text-xs font-medium uppercase tracking-wider">Finding:</span>
+						<div class="flex gap-2">
+							<label class="flex h-8 cursor-pointer items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-all {v8WantProfEmail ? 'border-violet-300 bg-violet-50 text-violet-700' : 'border-grey-200 text-grey-500 hover:border-grey-300'}">
+								<input type="checkbox" class="sr-only" bind:checked={v8WantProfEmail} />
+								<span class="material-icons-round text-sm">email</span>
+								Pro email
+							</label>
+							<label class="flex h-8 cursor-pointer items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-all {v8WantPhone ? 'border-blue-300 bg-blue-50 text-blue-700' : 'border-grey-200 text-grey-500 hover:border-grey-300'}">
+								<input type="checkbox" class="sr-only" bind:checked={v8WantPhone} />
+								<span class="material-icons-round text-sm">phone</span>
+								Phone
+							</label>
+							<label class="flex h-8 cursor-pointer items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-all {v8WantPersonalEmail ? 'border-pink-300 bg-pink-50 text-pink-700' : 'border-grey-200 text-grey-500 hover:border-grey-300'}">
+								<input type="checkbox" class="sr-only" bind:checked={v8WantPersonalEmail} />
+								<span class="material-icons-round text-sm">person</span>
+								Personal
+							</label>
+						</div>
+					</div>
+
+					<!-- Destination list selector — KEY V8 DIFFERENCE -->
+					{#if v8ModalMode !== 'list'}
+						<div class="mb-4 rounded-lg border border-grey-200 bg-grey-50 px-4 py-3">
+							<div class="flex items-center gap-2 mb-2">
+								<span class="material-icons-round text-grey-500 text-base">folder</span>
+								<span class="text-grey-700 text-sm font-medium">Where should results go?</span>
+							</div>
+							<div class="flex flex-col gap-1.5">
+								<label class="flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 transition-colors hover:bg-white {v8TargetList === '' ? 'bg-white border border-violet-200 shadow-sm' : ''}">
+									<input type="radio" name="v8-target" value="" bind:group={v8TargetList} class="accent-violet-700" />
+									<div>
+										<span class="text-grey-900 text-sm font-medium">Auto-create a new list</span>
+										<span class="text-grey-400 text-xs ml-1">named from your input</span>
+									</div>
+									<span class="ml-auto inline-flex items-center rounded-full border border-dashed border-grey-300 px-1.5 py-0.5 text-[10px] text-grey-400">auto</span>
+								</label>
+								{#each v6Store.lists.filter(l => l.type === 'people') as list}
+									<label class="flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 transition-colors hover:bg-white {v8TargetList === list.id ? 'bg-white border border-violet-200 shadow-sm' : ''}">
+										<input type="radio" name="v8-target" value={list.id} bind:group={v8TargetList} class="accent-violet-700" />
+										<span class="text-grey-900 text-sm">{list.name}</span>
+										<span class="text-grey-400 text-xs ml-auto">{list.memberIds.length} contacts</span>
+									</label>
+								{/each}
+							</div>
+						</div>
+					{/if}
+
+					<!-- Mode-specific input -->
+					{#if v8ModalMode === 'csv'}
+						<div class="border-grey-300 flex flex-col items-center justify-center rounded-xl border-2 border-dashed px-8 py-12 transition-colors hover:border-violet-300 hover:bg-violet-50/20">
+							<span class="material-icons-round text-grey-400 text-4xl">cloud_upload</span>
+							<p class="text-grey-700 mt-3 font-medium text-sm">Drop your CSV or Excel file here</p>
+							<p class="text-grey-500 mt-1 text-xs">Supports .csv, .xlsx — up to 64,000 contacts</p>
+							<button class="btn-primary mt-4 h-9 px-4 text-sm">Select File</button>
+						</div>
+					{:else if v8ModalMode === 'manual'}
+						<div class="flex flex-col gap-2">
+							{#each [1, 2] as _}
+								<div class="border-grey-200 flex gap-2 rounded-lg border p-2.5">
+									<input class="input h-8 flex-1 text-sm" placeholder="First name" />
+									<input class="input h-8 flex-1 text-sm" placeholder="Last name" />
+									<input class="input h-8 flex-1 text-sm" placeholder="Company" />
+									<input class="input h-8 flex-1 text-sm" placeholder="LinkedIn URL" />
+								</div>
+							{/each}
+							<button class="btn-ghost flex h-8 items-center gap-1 self-start text-sm">
+								<span class="material-icons-round text-base">add</span>
+								Add row
+							</button>
+						</div>
+					{:else if v8ModalMode === 'reverse'}
+						<p class="text-grey-600 mb-3 text-sm font-medium">Paste emails to reverse</p>
+						<textarea
+							class="input h-28 w-full resize-none text-sm font-mono"
+							placeholder="sarah@stripe.com&#10;james@hubspot.com&#10;emma@datadog.com"
+						></textarea>
+					{:else if v8ModalMode === 'crm'}
+						<p class="text-grey-600 mb-3 text-sm font-medium">Select HubSpot list</p>
+						<div class="flex flex-col gap-2">
+							{#each ['Newsletter signups', 'Cold leads 2025', 'Trial users May'] as listName}
+								<label class="flex cursor-pointer items-center gap-3 rounded-xl border border-grey-200 px-4 py-3 hover:border-violet-300 hover:bg-violet-50/30 transition-colors">
+									<input type="radio" name="v8-crm-list" class="accent-violet-700" />
+									<span class="text-grey-900 text-sm">{listName}</span>
+								</label>
+							{/each}
+						</div>
+					{:else}
+						<p class="text-grey-600 mb-3 text-sm font-medium">Select list to enrich in-place</p>
+						<div class="flex flex-col gap-2">
+							{#each v6Store.lists.filter(l => l.type === 'people') as list}
+								<label class="flex cursor-pointer items-center gap-3 rounded-xl border border-grey-200 px-4 py-3 hover:border-violet-300 hover:bg-violet-50/30 transition-colors">
+									<input type="radio" name="v8-from-list" class="accent-violet-700" />
+									<span class="text-grey-900 text-sm">{list.name}</span>
+									<span class="text-grey-400 text-xs ml-auto">{list.memberIds.length} contacts</span>
+								</label>
+							{/each}
+						</div>
+					{/if}
+
+					<!-- Launch -->
+					<div class="mt-5 flex items-center justify-between">
+						<p class="text-grey-400 text-xs">
+							{#if v8TargetList === '' && v8ModalMode !== 'list'}
+								A new list will be created automatically
+							{:else if v8ModalMode === 'list'}
+								Results enrich the selected list in-place
+							{:else}
+								Results will be added to the selected list
+							{/if}
+						</p>
+						<button class="btn-primary h-10 gap-2 px-5 text-sm font-semibold" onclick={v8Launch}>
 							<span class="material-icons-round text-sm text-white">auto_awesome</span>
 							Launch enrichment
 						</button>

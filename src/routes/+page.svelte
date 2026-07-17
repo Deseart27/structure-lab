@@ -8,6 +8,7 @@
 		{ id: 'v4', name: 'Version 4 — Find, Enrich, Push', desc: 'Unified lists, universal Export action, optional list organization. Enrichment from search goes to a list; CSV/manual enrichments are standalone jobs.', entry: 'search' },
 		{ id: 'v6', name: 'Version 6 — Jobs + Parallel Lists', desc: 'Jobs table + parallel Lists. One launcher, universal export, company bundles.', entry: 'search' },
 		{ id: 'v7', name: 'Version 7 — Lists Only', desc: 'Lists as the single object. Enrichment is a launcher + activity feed. Results always flow into lists. Onboarding routes you to the right section.', entry: 'search' },
+		{ id: 'v8', name: 'Version 8 — Auto Lists + Jobs', desc: 'Every enrichment auto-creates a list. Lists are the single object. Auto-created lists have provenance tags and can become manual lists.', entry: 'search' },
 	];
 </script>
 

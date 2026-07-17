@@ -21,7 +21,7 @@
 	<main
 		class="grid w-full grid-cols-[340px_1fr] grid-rows-[1fr] overflow-hidden rounded-2xl"
 		class:h-[calc(100vh-72px-16px)]={version !== 'v2' && version !== 'v3' && version !== 'v6'}
-		class:h-[calc(100vh-72px-40px-16px)]={version === 'v2' || version === 'v3' || version === 'v6' || version === 'v7'}
+		class:h-[calc(100vh-72px-40px-16px)]={version === 'v2' || version === 'v3' || version === 'v6' || version === 'v7' || version === 'v8'}
 	>
 		<!-- Sidebar -->
 		<aside
@@ -61,7 +61,7 @@
 				</div>
 			{/if}
 
-			{#if currentTab !== 'lists' || version === 'v2' || version === 'v3' || version === 'v4' || version === 'v6' || version === 'v7'}
+			{#if currentTab !== 'lists' || version === 'v2' || version === 'v3' || version === 'v4' || version === 'v6' || version === 'v7' || version === 'v8'}
 				<!-- Filters sidebar -->
 				<div class="min-h-0 flex-1 overflow-auto">
 					<div class="p-4">

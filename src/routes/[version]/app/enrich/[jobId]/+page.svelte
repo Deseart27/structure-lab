@@ -97,7 +97,7 @@
 	}
 </script>
 
-{#if version === 'v6' || version === 'v7'}
+{#if version === 'v6' || version === 'v7' || version === 'v8'}
 	{#if job}
 		<div class="flex h-full flex-col">
 			<!-- Header bar -->

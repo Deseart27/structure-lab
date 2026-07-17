@@ -12,7 +12,7 @@
 
 	// V7 onboarding — shown once per session
 	let v7OnboardingDone = $state(false);
-	let v7ShowOnboarding = $derived(version === 'v7' && !v7OnboardingDone);
+	let v7ShowOnboarding = $derived((version === 'v7' || version === 'v8') && !v7OnboardingDone);
 
 	function v7PickUseCase(route: string) {
 		v7OnboardingDone = true;

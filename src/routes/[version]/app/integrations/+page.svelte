@@ -40,7 +40,7 @@
 	];
 </script>
 
-{#if version === 'v6' || version === 'v7'}
+{#if version === 'v6' || version === 'v7' || version === 'v8'}
 	<!-- V6: CRM tab content -->
 	<div class="flex h-full flex-col overflow-auto p-8">
 		<h1 class="text-grey-900 mb-6 text-xl font-semibold">CRM</h1>

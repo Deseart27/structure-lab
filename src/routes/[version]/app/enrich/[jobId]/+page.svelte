@@ -97,7 +97,16 @@
 	}
 </script>
 
-{#if version === 'v6' || version === 'v7' || version === 'v8'}
+{#if version === 'v9'}
+	<!-- V9: No job detail — enrichment runs link directly to lists -->
+	<div class="flex h-full items-center justify-center">
+		<div class="text-center">
+			<span class="material-icons-round text-grey-300 text-4xl">info</span>
+			<p class="text-grey-500 mt-2 text-sm">In V9, enrichment results live in Lists.</p>
+			<a href="{base}/app/prospects" class="text-violet-600 hover:text-violet-700 mt-1 inline-block text-sm font-medium">Go to Lists</a>
+		</div>
+	</div>
+{:else if version === 'v6' || version === 'v7' || version === 'v8'}
 	{#if job}
 		<div class="flex h-full flex-col">
 			<!-- Header bar -->
@@ -220,6 +229,9 @@
 							<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Phone</th>
 							<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Personal email</th>
 							<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Status</th>
+							{#if version === 'v9'}
+								<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">In list</th>
+							{/if}
 							<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Actions</th>
 						</tr>
 					</thead>
@@ -299,6 +311,31 @@
 										<span class="inline-flex items-center rounded-full bg-grey-100 px-2 py-0.5 text-xs font-medium text-grey-500">Not found</span>
 									{/if}
 								</td>
+
+								<!-- In list (V9 cross-link) -->
+								{#if version === 'v9'}
+									{@const contactLists = v6Store.getListsForContact(contact.id)}
+									<td class="px-4 py-3">
+										{#if contactLists.length > 0}
+											<div class="flex flex-wrap gap-1">
+												{#each contactLists.slice(0, 2) as clist}
+													<a
+														href="{base}/app/prospects/{clist.id}"
+														class="inline-flex items-center gap-1 rounded-full border border-grey-200 bg-grey-50 px-2 py-0.5 text-xs font-medium text-grey-700 hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700 transition-colors"
+													>
+														<span class="material-icons-round text-[10px]">folder</span>
+														{clist.name}
+													</a>
+												{/each}
+												{#if contactLists.length > 2}
+													<span class="text-grey-400 text-xs">+{contactLists.length - 2}</span>
+												{/if}
+											</div>
+										{:else}
+											<span class="text-grey-300 text-xs">No list</span>
+										{/if}
+									</td>
+								{/if}
 
 								<!-- Per-row actions -->
 								<td class="px-4 py-3">

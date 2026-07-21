@@ -17,7 +17,7 @@
 	</div>
 
 	<div class="flex shrink-0 items-center gap-3 lg:gap-5">
-		{#if version === 'v6' || version === 'v7' || version === 'v8'}
+		{#if version === 'v6' || version === 'v7' || version === 'v8' || version === 'v9'}
 			<!-- New enrichment shortcut -->
 			<a
 				href="{base}/app/enrich"

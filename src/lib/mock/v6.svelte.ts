@@ -214,6 +214,25 @@ export const v6Store = {
 	addRun(run: EnrichmentRun) { runs = [run, ...runs]; },
 	getRunsForList(listId: string): EnrichmentRun[] { return runs.filter(r => r.listId === listId); },
 
+	// Cross-linking helpers for V9
+	getListsForContact(contactId: string): V6List[] {
+		return lists.filter(l => l.memberIds.includes(contactId));
+	},
+	getListsForCompany(companyId: string): V6List[] {
+		return lists.filter(l => l.type === 'company' && l.memberIds.includes(companyId));
+	},
+	getLastRunForContact(contactId: string): EnrichmentRun | undefined {
+		// Find runs whose list contains this contact, return most recent
+		for (const run of runs) {
+			const list = lists.find(l => l.id === run.listId);
+			if (list && list.memberIds.includes(contactId)) return run;
+		}
+		return undefined;
+	},
+	getLatestRunForList(listId: string): EnrichmentRun | undefined {
+		return runs.find(r => r.listId === listId);
+	},
+
 	unlockFunding(companyId: string) {
 		companies = companies.map(c => {
 			if (c.id !== companyId) return c;

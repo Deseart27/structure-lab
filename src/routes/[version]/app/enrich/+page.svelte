@@ -981,7 +981,7 @@
 		</div>
 	</div>
 {/if}
-{:else if version === 'v8'}
+{:else if version === 'v8' || version === 'v9'}
 <!-- V8 Enrichment — Launcher + Activity Feed (auto-created lists) -->
 <div class="flex h-full flex-col overflow-auto">
 	<div class="flex justify-center pt-14 pb-20">
@@ -1037,6 +1037,20 @@
 					<span class="rounded-full bg-teal-600 px-2 py-0.5 text-[10px] font-semibold text-white">New</span>
 				</button>
 
+				{#if version === 'v9'}
+				<button
+					class="group flex flex-col items-center gap-3 rounded-2xl border-2 border-amber-200 bg-gradient-to-b from-amber-50 to-white px-5 py-6 text-center shadow-sm transition-all hover:border-amber-400 hover:shadow-lg"
+					onclick={() => v8SelectOutput('all')}
+				>
+					<div class="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-100 transition-colors group-hover:bg-amber-200">
+						<span class="material-icons-round text-amber-700 text-2xl">hub</span>
+					</div>
+					<div>
+						<p class="text-grey-900 text-sm font-bold">CRM Enrichment</p>
+						<p class="text-grey-500 mt-0.5 text-xs">Enrich your CRM contacts</p>
+					</div>
+				</button>
+			{:else}
 				<button
 					class="group flex flex-col items-center gap-3 rounded-2xl border-2 border-amber-200 bg-gradient-to-b from-amber-50 to-white px-5 py-6 text-center shadow-sm transition-all hover:border-amber-400 hover:shadow-lg"
 					onclick={() => v8SelectOutput('all')}
@@ -1049,14 +1063,104 @@
 						<p class="text-grey-500 mt-0.5 text-xs">Emails + Phones in one go</p>
 					</div>
 				</button>
+			{/if}
 			</div>
 
 			<!-- Recent Activity -->
 			<div class="flex items-center justify-between pb-4">
-				<h2 class="text-grey-900 text-lg font-semibold">Recent activity</h2>
+				<h2 class="text-grey-900 text-lg font-semibold">{version === 'v9' ? 'Recent Enrichments' : 'Recent activity'}</h2>
 				<span class="text-grey-400 text-sm">{v8Runs.filter(r => r.status === 'running').length} running</span>
 			</div>
 
+			{#if version === 'v9'}
+			<!-- V9: List-centric enrichment table -->
+			<div class="list-shell overflow-hidden">
+				<table class="w-full min-w-[800px]">
+					<thead>
+						<tr class="table-header">
+							<th class="text-grey-600 px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider">List</th>
+							<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Enrichment</th>
+							<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Found</th>
+							<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Status</th>
+							<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Started</th>
+							<th class="w-10 px-3 py-3"></th>
+						</tr>
+					</thead>
+					<tbody class="bg-white">
+						{#each v8Runs as run}
+							<tr
+								class="border-grey-100 border-b transition-colors hover:bg-grey-50 cursor-pointer {run.status === 'running' ? 'bg-amber-50/20' : ''}"
+								onclick={() => { window.location.href = `${base}/app/prospects/${run.listId}`; }}
+							>
+								<!-- List (primary) -->
+								<td class="px-5 py-3.5">
+									<a
+										href="{base}/app/prospects/{run.listId}"
+										class="flex items-center gap-3 group"
+										onclick={(e) => e.stopPropagation()}
+									>
+										<div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-grey-100 group-hover:bg-violet-50 transition-colors">
+											<span class="material-icons-round text-grey-500 text-lg group-hover:text-violet-600 transition-colors">folder</span>
+										</div>
+										<div class="min-w-0">
+											<p class="text-grey-900 text-sm font-semibold group-hover:text-violet-700 transition-colors truncate max-w-[200px]">{run.listName}</p>
+											<p class="text-grey-400 text-xs">{run.contactsCount} contacts · via {run.inputMethod.toUpperCase()}</p>
+										</div>
+									</a>
+								</td>
+								<!-- Enrichment type (secondary) -->
+								<td class="px-4 py-3.5">
+									<div class="flex items-center gap-2">
+										<div class="flex h-6 w-6 shrink-0 items-center justify-center rounded
+											{run.outputType === 'emails' ? 'bg-violet-50' : run.outputType === 'phones' ? 'bg-blue-50' : run.outputType === 'reverse' ? 'bg-teal-50' : 'bg-amber-50'}">
+											<span class="material-icons-round text-xs
+												{run.outputType === 'emails' ? 'text-violet-600' : run.outputType === 'phones' ? 'text-blue-600' : run.outputType === 'reverse' ? 'text-teal-600' : 'text-amber-600'}">
+												{run.outputType === 'emails' ? 'email' : run.outputType === 'phones' ? 'phone' : run.outputType === 'reverse' ? 'swap_horiz' : 'auto_awesome'}
+											</span>
+										</div>
+										<span class="text-grey-700 text-sm">
+											{run.outputType === 'emails' ? 'Emails' : run.outputType === 'phones' ? 'Phones' : run.outputType === 'reverse' ? 'Reverse' : 'CRM'}
+										</span>
+									</div>
+								</td>
+								<!-- Found -->
+								<td class="px-4 py-3.5">
+									<span class="text-grey-800 text-sm font-medium">{run.found}<span class="text-grey-400 font-normal">/{run.contactsCount}</span></span>
+								</td>
+								<!-- Status + Progress combined -->
+								<td class="px-4 py-3.5">
+									{#if run.status === 'running'}
+										<div class="flex items-center gap-2">
+											<div class="bg-grey-200 h-1.5 w-16 overflow-hidden rounded-full">
+												<div class="h-full rounded-full bg-amber-400" style:width="{run.progress}%"></div>
+											</div>
+											<span class="text-amber-700 text-xs font-medium">{run.progress}%</span>
+										</div>
+									{:else if run.status === 'queued'}
+										<span class="inline-flex h-6 items-center rounded-full bg-grey-100 px-2.5 text-xs font-medium text-grey-500">Queued</span>
+									{:else}
+										<span class="inline-flex h-6 items-center rounded-full bg-emerald-50 px-2.5 text-xs font-medium text-emerald-700">Completed</span>
+									{/if}
+								</td>
+								<!-- Started -->
+								<td class="text-grey-500 px-4 py-3.5 text-xs">{run.startedAt}</td>
+								<!-- Arrow -->
+								<td class="px-3 py-3.5 text-right">
+									<span class="material-icons-round text-grey-300 text-base">chevron_right</span>
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+				{#if v8Runs.length === 0}
+					<div class="flex flex-col items-center justify-center gap-2 py-16">
+						<span class="material-icons-round text-grey-300 text-4xl">auto_awesome</span>
+						<p class="text-grey-500 text-sm">No enrichment runs yet. Pick an enrichment type above to get started.</p>
+					</div>
+				{/if}
+			</div>
+			{:else}
+			<!-- V8: Card-style activity feed -->
 			<div class="list-shell overflow-hidden">
 				{#each v8Runs as run, i}
 					<a
@@ -1123,6 +1227,7 @@
 					</div>
 				{/if}
 			</div>
+			{/if}
 		</div>
 	</div>
 </div>

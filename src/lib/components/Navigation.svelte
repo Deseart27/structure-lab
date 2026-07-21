@@ -9,7 +9,7 @@
 	type NavItem = { label: string; href: string; match: string; badge?: string };
 
 	let navItems = $derived<NavItem[]>(
-		version === 'v8'
+		version === 'v8' || version === 'v9'
 			? [
 					{ label: 'Search', href: `${base}/app/search`, match: '/search' },
 					{ label: 'Lists', href: `${base}/app/prospects`, match: '/prospects' },

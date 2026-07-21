@@ -41,6 +41,9 @@
 	let v8ListRuns = $derived(v8List ? v6Store.getRunsForList(v8List.id) : []);
 	let v8ActiveRun = $derived(v8ListRuns.find(r => r.status === 'running'));
 
+	// V9: selected enrichment run for filtering
+	let v9SelectedRun = $state<string | null>(null);
+
 	const emailStatusStyles: Record<string, { label: string; color: string }> = {
 		valid:          { label: 'Valid',         color: 'text-emerald-700 bg-emerald-50' },
 		'catch-all':    { label: 'Catch-all',     color: 'text-amber-700 bg-amber-50' },
@@ -485,6 +488,289 @@
 	<p class="text-grey-400 text-sm">List not found.</p>
 </div>
 
+{:else if version === 'v9' && v8List}
+<!-- V9 List Detail — side panel with donut charts + enrichment timeline -->
+{@const emailStats = (() => {
+	const stats = { valid: 0, catchAll: 0, invalid: 0, notFound: 0, pending: 0, total: v8Contacts.length };
+	for (const c of v8Contacts) {
+		if (c.emailStatus === 'valid') stats.valid++;
+		else if (c.emailStatus === 'catch-all') stats.catchAll++;
+		else if (c.emailStatus === 'invalid-found') stats.invalid++;
+		else if (c.emailStatus === 'not-found') stats.notFound++;
+		else stats.pending++;
+	}
+	return stats;
+})()}
+{@const phoneStats = (() => {
+	const found = v8Contacts.filter(c => c.phone).length;
+	return { found, notFound: v8Contacts.length - found, total: v8Contacts.length };
+})()}
+<div class="flex h-full flex-col">
+	<!-- Header -->
+	<div class="border-grey-200 flex h-14 shrink-0 items-center justify-between border-b px-6">
+		<div class="flex items-center gap-3">
+			<a href="{base}/app/prospects" class="btn-ghost flex h-8 w-8 items-center justify-center rounded-lg p-0">
+				<span class="material-icons-round text-grey-600 text-lg">arrow_back</span>
+			</a>
+			<h1 class="text-grey-900 text-base font-semibold">{v8List.name}</h1>
+			{#if v8List.autoCreated}
+				<span class="inline-flex items-center gap-1 rounded-full border border-dashed border-grey-300 px-1.5 py-0.5 text-[10px] text-grey-400">
+					<span class="material-icons-round text-[10px]">auto_awesome</span>
+					auto
+				</span>
+			{/if}
+			{#if v8List.type === 'people'}
+				<span class="inline-flex items-center rounded-full bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-700">People</span>
+				<span class="text-grey-500 text-sm">{v8Contacts.length} contacts</span>
+			{:else}
+				<span class="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">Company</span>
+				<span class="text-grey-500 text-sm">{v8Companies.length} companies</span>
+			{/if}
+			{#if v8ActiveRun}
+				<span class="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700">
+					<span class="material-icons-round text-xs animate-spin" style="animation-duration:1.5s">sync</span>
+					Enriching {v8ActiveRun.progress}%
+				</span>
+			{/if}
+		</div>
+		<div class="flex items-center gap-2">
+			{#if v8List.type === 'people'}
+				<a href="{base}/app/enrich" class="btn-ghost h-8 gap-1.5 px-3 text-sm">
+					<span class="material-icons-round text-violet-600 text-base">auto_awesome</span>
+					Enrich
+				</a>
+			{/if}
+			<div class="relative">
+				<button class="btn-ghost h-8 gap-1.5 px-3 text-sm" onclick={() => { v6ExportOpen = !v6ExportOpen; }}>
+					<span class="material-icons-round text-grey-600 text-base">download</span>
+					Export
+					<span class="material-icons-round text-grey-400 text-sm">expand_more</span>
+				</button>
+				<ExportPopover
+					bind:open={v6ExportOpen}
+					context={v8List.type === 'people' ? 'people' : 'companies'}
+					count={v8List.memberIds.length}
+					sourceName={v8List.name}
+				/>
+			</div>
+			<button class="btn-ghost h-8 gap-1.5 px-3 text-sm" onclick={() => toast.show('Add contacts — coming soon')}>
+				<span class="material-icons-round text-grey-600 text-base">person_add</span>
+				Add contacts
+			</button>
+		</div>
+	</div>
+
+	<!-- Body: table + side panel -->
+	<div class="flex flex-1 overflow-hidden">
+		<!-- Contact table -->
+		<div class="flex-1 overflow-auto">
+			{#if v8List.autoCreated && v8List.autoCreatedFrom}
+				<div class="border-b border-grey-100 bg-grey-50/50 px-6 py-2.5">
+					<div class="flex items-center gap-2 text-xs text-grey-500">
+						<span class="material-icons-round text-sm text-grey-400">info</span>
+						Auto-created from
+						<span class="font-medium text-grey-700">{v8List.autoCreatedFrom.type === 'csv' ? 'CSV' : v8List.autoCreatedFrom.type === 'search' ? 'Search' : 'Enrichment'}: {v8List.autoCreatedFrom.name}</span>
+						<span class="text-grey-300">·</span>
+						<button class="text-violet-600 hover:text-violet-700 font-medium" onclick={() => toast.show('List is now a regular list')}>Make permanent</button>
+					</div>
+				</div>
+			{/if}
+
+			{#if v8List.type === 'people'}
+				<table class="w-full min-w-[800px]">
+					<thead class="sticky top-0 z-10">
+						<tr class="table-header">
+							<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Name</th>
+							<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Company</th>
+							<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Title</th>
+							<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Email</th>
+							<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Phone</th>
+							<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Email status</th>
+							<th class="w-12 px-4 py-3"></th>
+						</tr>
+					</thead>
+					<tbody class="bg-white">
+						{#each v9SelectedRun ? v8Contacts.filter(c => { const run = v6Store.getLastRunForContact(c.id); return run && run.id === v9SelectedRun; }) : v8Contacts as contact}
+							<tr class="border-grey-100 hover:bg-grey-50 border-b transition-colors">
+								<td class="px-4 py-3">
+									<p class="text-grey-900 text-sm font-medium">{contact.firstName} {contact.lastName}</p>
+								</td>
+								<td class="text-grey-700 px-4 py-3 text-sm">{contact.company}</td>
+								<td class="text-grey-600 px-4 py-3 text-sm">{contact.title}</td>
+								<td class="px-4 py-3">
+									{#if contact.email}
+										<span class="text-grey-900 font-mono text-xs">{contact.email}</span>
+									{:else}
+										<span class="text-grey-300 text-xs">—</span>
+									{/if}
+								</td>
+								<td class="px-4 py-3">
+									{#if contact.phone}
+										<span class="text-grey-900 font-mono text-xs">{contact.phone}</span>
+									{:else}
+										<span class="text-grey-300 text-xs">—</span>
+									{/if}
+								</td>
+								<td class="px-4 py-3">
+									{#if emailStatusStyles[contact.emailStatus]}
+										<span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium {emailStatusStyles[contact.emailStatus].color}">
+											{emailStatusStyles[contact.emailStatus].label}
+										</span>
+									{:else}
+										<span class="text-grey-300 text-xs">—</span>
+									{/if}
+								</td>
+								<td class="px-4 py-3 text-right">
+									<button
+										class="btn-ghost h-7 w-7 p-0"
+										title="Remove from list"
+										onclick={() => toast.show(`${contact.firstName} ${contact.lastName} removed from list`)}
+									>
+										<span class="material-icons-round text-grey-400 text-base">close</span>
+									</button>
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			{:else}
+				<table class="w-full min-w-[700px]">
+					<thead class="sticky top-0 z-10">
+						<tr class="table-header">
+							<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Company</th>
+							<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Industry</th>
+							<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Headcount</th>
+							<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Location</th>
+							<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Funding</th>
+						</tr>
+					</thead>
+					<tbody class="bg-white">
+						{#each v8Companies as company}
+							{#if company}
+								<tr class="border-grey-100 hover:bg-grey-50 border-b transition-colors">
+									<td class="px-4 py-3">
+										<a href="{base}/app/search/companies/{company.id}" class="text-grey-900 text-sm font-medium hover:text-violet-700">{company.name}</a>
+									</td>
+									<td class="text-grey-700 px-4 py-3 text-sm">{company.industry}</td>
+									<td class="text-grey-700 px-4 py-3 text-sm">{company.headcount.toLocaleString()}</td>
+									<td class="text-grey-700 px-4 py-3 text-sm">{company.location}</td>
+									<td class="px-4 py-3">
+										{#if company.fundingUnlocked && company.funding}
+											<span class="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
+												{company.funding.round} · ${company.funding.amount}
+											</span>
+										{:else}
+											<span class="inline-flex items-center gap-1 rounded-full bg-grey-100 px-2 py-0.5 text-xs font-medium text-grey-500">
+												<span class="material-icons-round text-xs">lock</span>
+												Locked
+											</span>
+										{/if}
+									</td>
+								</tr>
+							{/if}
+						{/each}
+					</tbody>
+				</table>
+			{/if}
+		</div>
+
+		<!-- Right side panel -->
+		{#if v8List.type === 'people'}
+		<div class="border-grey-200 w-72 shrink-0 border-l bg-white overflow-y-auto">
+			<!-- Email donut -->
+			<div class="border-b border-grey-100 px-5 py-5">
+				<p class="text-grey-700 mb-3 text-xs font-semibold uppercase tracking-wider">Email results</p>
+				<div class="flex items-center gap-4">
+					<svg viewBox="0 0 36 36" class="h-16 w-16 shrink-0">
+						<circle cx="18" cy="18" r="15.915" fill="none" stroke="#f3f4f6" stroke-width="3" />
+						<circle cx="18" cy="18" r="15.915" fill="none" stroke="#10b981" stroke-width="3"
+							stroke-dasharray="{emailStats.valid / (emailStats.total || 1) * 100} {100 - emailStats.valid / (emailStats.total || 1) * 100}" stroke-dashoffset="25" stroke-linecap="round" />
+						<circle cx="18" cy="18" r="15.915" fill="none" stroke="#f59e0b" stroke-width="3"
+							stroke-dasharray="{emailStats.catchAll / (emailStats.total || 1) * 100} {100 - emailStats.catchAll / (emailStats.total || 1) * 100}" stroke-dashoffset="{25 - emailStats.valid / (emailStats.total || 1) * 100}" stroke-linecap="round" />
+						<circle cx="18" cy="18" r="15.915" fill="none" stroke="#ef4444" stroke-width="3"
+							stroke-dasharray="{emailStats.invalid / (emailStats.total || 1) * 100} {100 - emailStats.invalid / (emailStats.total || 1) * 100}" stroke-dashoffset="{25 - emailStats.valid / (emailStats.total || 1) * 100 - emailStats.catchAll / (emailStats.total || 1) * 100}" stroke-linecap="round" />
+						<text x="18" y="18.5" text-anchor="middle" dominant-baseline="middle" class="fill-grey-900 text-[7px] font-bold">{emailStats.valid + emailStats.catchAll}</text>
+						<text x="18" y="23" text-anchor="middle" dominant-baseline="middle" class="fill-grey-400 text-[4px]">found</text>
+					</svg>
+					<div class="flex flex-col gap-1 text-xs">
+						<div class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-emerald-500"></span><span class="text-grey-600">Valid</span><span class="text-grey-900 ml-auto font-medium">{emailStats.valid}</span></div>
+						<div class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-amber-500"></span><span class="text-grey-600">Catch-all</span><span class="text-grey-900 ml-auto font-medium">{emailStats.catchAll}</span></div>
+						<div class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-red-500"></span><span class="text-grey-600">Invalid</span><span class="text-grey-900 ml-auto font-medium">{emailStats.invalid}</span></div>
+						<div class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-grey-300"></span><span class="text-grey-600">Not found</span><span class="text-grey-900 ml-auto font-medium">{emailStats.notFound}</span></div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Phone donut -->
+			<div class="border-b border-grey-100 px-5 py-5">
+				<p class="text-grey-700 mb-3 text-xs font-semibold uppercase tracking-wider">Phone results</p>
+				<div class="flex items-center gap-4">
+					<svg viewBox="0 0 36 36" class="h-16 w-16 shrink-0">
+						<circle cx="18" cy="18" r="15.915" fill="none" stroke="#f3f4f6" stroke-width="3" />
+						<circle cx="18" cy="18" r="15.915" fill="none" stroke="#3b82f6" stroke-width="3"
+							stroke-dasharray="{phoneStats.found / (phoneStats.total || 1) * 100} {100 - phoneStats.found / (phoneStats.total || 1) * 100}" stroke-dashoffset="25" stroke-linecap="round" />
+						<text x="18" y="18.5" text-anchor="middle" dominant-baseline="middle" class="fill-grey-900 text-[7px] font-bold">{phoneStats.found}</text>
+						<text x="18" y="23" text-anchor="middle" dominant-baseline="middle" class="fill-grey-400 text-[4px]">found</text>
+					</svg>
+					<div class="flex flex-col gap-1 text-xs">
+						<div class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-blue-500"></span><span class="text-grey-600">Found</span><span class="text-grey-900 ml-auto font-medium">{phoneStats.found}</span></div>
+						<div class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-grey-300"></span><span class="text-grey-600">Not found</span><span class="text-grey-900 ml-auto font-medium">{phoneStats.notFound}</span></div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Enrichment timeline -->
+			<div class="px-5 py-5">
+				<div class="flex items-center justify-between mb-3">
+					<p class="text-grey-700 text-xs font-semibold uppercase tracking-wider">Enrichments</p>
+					{#if v9SelectedRun}
+						<button class="text-violet-600 hover:text-violet-700 text-xs font-medium" onclick={() => { v9SelectedRun = null; }}>Show all</button>
+					{/if}
+				</div>
+				<div class="flex flex-col gap-2">
+					{#each v8ListRuns as run}
+						<button
+							class="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-left transition-all
+								{v9SelectedRun === run.id ? 'border-2 border-violet-400 bg-violet-50/50 shadow-sm' : v9SelectedRun ? 'border border-grey-100 bg-white opacity-50' : 'border border-grey-100 bg-white hover:border-grey-200 hover:bg-grey-50'}"
+							onclick={() => { v9SelectedRun = v9SelectedRun === run.id ? null : run.id; }}
+						>
+							<div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md
+								{run.outputType === 'emails' ? 'bg-violet-50' : run.outputType === 'phones' ? 'bg-blue-50' : run.outputType === 'reverse' ? 'bg-teal-50' : 'bg-amber-50'}">
+								<span class="material-icons-round text-sm
+									{run.outputType === 'emails' ? 'text-violet-600' : run.outputType === 'phones' ? 'text-blue-600' : run.outputType === 'reverse' ? 'text-teal-600' : 'text-amber-600'}">
+									{run.outputType === 'emails' ? 'email' : run.outputType === 'phones' ? 'phone' : run.outputType === 'reverse' ? 'swap_horiz' : 'auto_awesome'}
+								</span>
+							</div>
+							<div class="min-w-0 flex-1">
+								<p class="text-grey-800 text-xs font-medium truncate">
+									{run.outputType === 'emails' ? 'Find Emails' : run.outputType === 'phones' ? 'Find Phones' : run.outputType === 'reverse' ? 'Reverse' : 'CRM'}
+								</p>
+								<p class="text-grey-400 text-[10px]">{run.found}/{run.contactsCount} found · {run.startedAt}</p>
+							</div>
+							{#if run.status === 'running'}
+								<span class="text-amber-600 text-[10px] font-semibold">{run.progress}%</span>
+							{:else if run.status === 'completed'}
+								<span class="material-icons-round text-emerald-500 text-sm">check_circle</span>
+							{:else}
+								<span class="material-icons-round text-grey-300 text-sm">schedule</span>
+							{/if}
+						</button>
+					{/each}
+					{#if v8ListRuns.length === 0}
+						<p class="text-grey-400 text-xs py-2">No enrichments yet</p>
+					{/if}
+				</div>
+			</div>
+		</div>
+		{/if}
+	</div>
+</div>
+
+{:else if version === 'v9' && !v8List}
+<div class="flex h-full items-center justify-center">
+	<p class="text-grey-400 text-sm">List not found.</p>
+</div>
+
 {:else if version === 'v8' && v8List}
 <!-- V8 List Detail — with auto-created provenance -->
 <div class="flex h-full flex-col">
@@ -641,7 +927,7 @@
 									<span class="text-grey-300 text-xs">—</span>
 								{/if}
 							</td>
-							<td class="px-4 py-3 text-right">
+								<td class="px-4 py-3 text-right">
 								<button
 									class="btn-ghost h-7 w-7 p-0"
 									title="Remove from list"

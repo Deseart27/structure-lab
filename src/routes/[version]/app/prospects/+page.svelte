@@ -63,6 +63,31 @@
 		v6NewListOpen = false;
 	}
 
+	// V9 state
+	let v9View = $state<'people-lists' | 'all-contacts' | 'company-lists' | 'all-companies'>('all-contacts');
+	let v9OwnerFilter = $state<'mine' | 'all'>('mine');
+	let v9PeopleLists = $derived(
+		(v9OwnerFilter === 'mine'
+			? v6Store.lists.filter(l => l.owner === 'Francis')
+			: v6Store.lists
+		).filter(l => l.type === 'people')
+	);
+	let v9CompanyLists = $derived(
+		(v9OwnerFilter === 'mine'
+			? v6Store.lists.filter(l => l.owner === 'Francis')
+			: v6Store.lists
+		).filter(l => l.type === 'company')
+	);
+
+	import type { EmailStatus } from '$lib/mock/v6.svelte';
+	const emailStatusStyles: Record<EmailStatus, { label: string; color: string }> = {
+		valid: { label: 'Valid', color: 'text-emerald-700 bg-emerald-50' },
+		'catch-all': { label: 'Catch-all', color: 'text-amber-700 bg-amber-50' },
+		'invalid-found': { label: 'Invalid', color: 'text-orange-700 bg-orange-50' },
+		'not-found': { label: 'Not found', color: 'text-grey-600 bg-grey-100' },
+		pending: { label: 'Pending', color: 'text-blue-700 bg-blue-50' },
+	};
+
 	// V1/V2: Lists view
 	type ProspectList = {
 		id: string;
@@ -642,6 +667,287 @@
 	</div>
 </div>
 
+{:else if version === 'v9'}
+<!-- V9: Sidebar with Contacts section (all contacts + people lists) and Companies section (all companies + company lists) -->
+<div class="flex h-full">
+	<!-- Left sidebar -->
+	<div class="border-grey-200 flex w-56 shrink-0 flex-col border-r bg-white overflow-y-auto">
+		<!-- Owner filter -->
+		<div class="px-3 pt-4 pb-2">
+			<div class="flex items-center rounded-lg border border-grey-200 p-0.5">
+				<button
+					class="flex-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors {v9OwnerFilter === 'mine' ? 'bg-grey-100 text-grey-900' : 'text-grey-500 hover:text-grey-700'}"
+					onclick={() => { v9OwnerFilter = 'mine'; }}
+				>My lists</button>
+				<button
+					class="flex-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors {v9OwnerFilter === 'all' ? 'bg-grey-100 text-grey-900' : 'text-grey-500 hover:text-grey-700'}"
+					onclick={() => { v9OwnerFilter = 'all'; }}
+				>All</button>
+			</div>
+		</div>
+
+		<!-- Contacts section -->
+		<div class="px-3 pt-3 pb-1">
+			<p class="text-grey-400 mb-1 px-2 text-[10px] font-semibold uppercase tracking-wider">Contacts</p>
+		</div>
+		<nav class="flex flex-col gap-0.5 px-3">
+			<button
+				class="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition-colors {v9View === 'all-contacts' ? 'bg-violet-50 text-violet-700' : 'text-grey-600 hover:bg-grey-50 hover:text-grey-900'}"
+				onclick={() => { v9View = 'all-contacts'; }}
+			>
+				<span class="material-icons-round text-base {v9View === 'all-contacts' ? 'text-violet-500' : 'text-grey-400'}">people</span>
+				All Contacts
+				<span class="text-grey-400 ml-auto text-xs">{v6Store.contacts.length}</span>
+			</button>
+			{#each v9PeopleLists as list}
+				<a
+					href="{base}/app/prospects/{list.id}"
+					class="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm transition-colors text-grey-600 hover:bg-grey-50 hover:text-grey-900"
+				>
+					<span class="material-icons-round text-grey-300 text-base">folder</span>
+					<span class="truncate flex-1">{list.name}</span>
+					<span class="text-grey-400 text-xs">{list.memberIds.length}</span>
+				</a>
+			{/each}
+		</nav>
+
+		<!-- Companies section -->
+		<div class="px-3 pt-4 pb-1">
+			<p class="text-grey-400 mb-1 px-2 text-[10px] font-semibold uppercase tracking-wider">Companies</p>
+		</div>
+		<nav class="flex flex-col gap-0.5 px-3 pb-4">
+			<button
+				class="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition-colors {v9View === 'all-companies' ? 'bg-violet-50 text-violet-700' : 'text-grey-600 hover:bg-grey-50 hover:text-grey-900'}"
+				onclick={() => { v9View = 'all-companies'; }}
+			>
+				<span class="material-icons-round text-base {v9View === 'all-companies' ? 'text-violet-500' : 'text-grey-400'}">domain</span>
+				All Companies
+				<span class="text-grey-400 ml-auto text-xs">{v6Store.companies.length}</span>
+			</button>
+			{#each v9CompanyLists as list}
+				<a
+					href="{base}/app/prospects/{list.id}"
+					class="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm transition-colors text-grey-600 hover:bg-grey-50 hover:text-grey-900"
+				>
+					<span class="material-icons-round text-grey-300 text-base">folder</span>
+					<span class="truncate flex-1">{list.name}</span>
+					<span class="text-grey-400 text-xs">{list.memberIds.length}</span>
+				</a>
+			{/each}
+		</nav>
+	</div>
+
+	<!-- Main content -->
+	<div class="flex flex-1 flex-col overflow-hidden">
+		{#if v9View === 'all-contacts'}
+		<!-- All Contacts view -->
+		<div class="border-grey-200 flex h-14 shrink-0 items-center justify-between border-b px-6">
+			<div class="flex items-center gap-3">
+				<h1 class="text-grey-900 text-base font-semibold">All Contacts</h1>
+				<span class="text-grey-500 text-sm">{v6Store.contacts.length} contacts</span>
+			</div>
+			<div class="flex items-center gap-2">
+				<button class="btn-ghost h-8 gap-1.5 px-3 text-sm" onclick={() => toast.show('Import CSV — coming soon')}>
+					<span class="material-icons-round text-grey-600 text-base">upload_file</span>
+					Import
+				</button>
+				<button class="btn-primary h-8 gap-1.5 px-3 text-sm" onclick={() => { v6NewListOpen = true; }}>
+					<span class="material-icons-round text-sm text-white">add</span>
+					New list
+				</button>
+			</div>
+		</div>
+		<div class="flex-1 overflow-auto">
+			<table class="w-full min-w-[1000px]">
+				<thead class="sticky top-0 z-10">
+					<tr class="table-header">
+						<th class="text-grey-600 px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider">Name</th>
+						<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Company</th>
+						<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Title</th>
+						<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Email</th>
+						<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Phone</th>
+						<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Email status</th>
+						<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">In lists</th>
+					</tr>
+				</thead>
+				<tbody class="bg-white">
+					{#each v6Store.contacts as contact}
+						{@const contactLists = v6Store.getListsForContact(contact.id)}
+						<tr class="border-grey-100 hover:bg-grey-50 border-b transition-colors">
+							<td class="px-5 py-3">
+								<div>
+									<p class="text-grey-900 text-sm font-medium">{contact.firstName} {contact.lastName}</p>
+									<p class="text-grey-400 text-xs">{contact.location}</p>
+								</div>
+							</td>
+							<td class="text-grey-700 px-4 py-3 text-sm">{contact.company}</td>
+							<td class="text-grey-600 px-4 py-3 text-sm">{contact.title}</td>
+							<td class="px-4 py-3">
+								{#if contact.email}
+									<span class="text-grey-900 font-mono text-xs">{contact.email}</span>
+								{:else}
+									<span class="text-grey-300 text-xs">—</span>
+								{/if}
+							</td>
+							<td class="px-4 py-3">
+								{#if contact.phone}
+									<span class="text-grey-900 font-mono text-xs">{contact.phone}</span>
+								{:else}
+									<span class="text-grey-300 text-xs">—</span>
+								{/if}
+							</td>
+							<td class="px-4 py-3">
+								{#if emailStatusStyles[contact.emailStatus]}
+									<span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium {emailStatusStyles[contact.emailStatus].color}">
+										{emailStatusStyles[contact.emailStatus].label}
+									</span>
+								{:else}
+									<span class="text-grey-300 text-xs">—</span>
+								{/if}
+							</td>
+							<td class="px-4 py-3">
+								{#if contactLists.length > 0}
+									<div class="flex flex-wrap gap-1">
+										{#each contactLists.slice(0, 2) as clist}
+											<a
+												href="{base}/app/prospects/{clist.id}"
+												class="inline-flex items-center gap-1 rounded-full border border-grey-200 bg-grey-50 px-2 py-0.5 text-xs font-medium text-grey-700 hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700 transition-colors"
+											>
+												<span class="material-icons-round text-[10px]">folder</span>
+												<span class="max-w-[100px] truncate">{clist.name}</span>
+											</a>
+										{/each}
+										{#if contactLists.length > 2}
+											<span class="text-grey-400 text-xs">+{contactLists.length - 2}</span>
+										{/if}
+									</div>
+								{:else}
+									<span class="text-grey-300 text-xs">No list</span>
+								{/if}
+							</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		</div>
+
+		{:else if v9View === 'all-companies'}
+		<!-- All Companies view -->
+		<div class="border-grey-200 flex h-14 shrink-0 items-center justify-between border-b px-6">
+			<div class="flex items-center gap-3">
+				<h1 class="text-grey-900 text-base font-semibold">All Companies</h1>
+				<span class="text-grey-500 text-sm">{v6Store.companies.length} companies</span>
+			</div>
+			<div class="flex items-center gap-2">
+				<button class="btn-primary h-8 gap-1.5 px-3 text-sm" onclick={() => { v6NewListOpen = true; }}>
+					<span class="material-icons-round text-sm text-white">add</span>
+					New list
+				</button>
+			</div>
+		</div>
+		<div class="flex-1 overflow-auto">
+			<table class="w-full min-w-[1000px]">
+				<thead class="sticky top-0 z-10">
+					<tr class="table-header">
+						<th class="text-grey-600 px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider">Company</th>
+						<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Domain</th>
+						<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Industry</th>
+						<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Headcount</th>
+						<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Location</th>
+						<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Founded</th>
+						<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">In lists</th>
+					</tr>
+				</thead>
+				<tbody class="bg-white">
+					{#each v6Store.companies as company}
+						{@const companyLists = v6Store.getListsForCompany(company.id)}
+						<tr class="border-grey-100 hover:bg-grey-50 border-b transition-colors">
+							<td class="px-5 py-3">
+								<div>
+									<p class="text-grey-900 text-sm font-medium">{company.name}</p>
+									<p class="text-grey-400 text-xs">{company.type}</p>
+								</div>
+							</td>
+							<td class="px-4 py-3">
+								<span class="text-grey-700 font-mono text-xs">{company.domain}</span>
+							</td>
+							<td class="text-grey-700 px-4 py-3 text-sm">{company.industry}</td>
+							<td class="text-grey-700 px-4 py-3 text-sm">{company.headcount.toLocaleString()}</td>
+							<td class="text-grey-600 px-4 py-3 text-sm">{company.location}</td>
+							<td class="text-grey-600 px-4 py-3 text-sm">{company.yearFounded}</td>
+							<td class="px-4 py-3">
+								{#if companyLists.length > 0}
+									<div class="flex flex-wrap gap-1">
+										{#each companyLists.slice(0, 2) as clist}
+											<a
+												href="{base}/app/prospects/{clist.id}"
+												class="inline-flex items-center gap-1 rounded-full border border-grey-200 bg-grey-50 px-2 py-0.5 text-xs font-medium text-grey-700 hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700 transition-colors"
+											>
+												<span class="material-icons-round text-[10px]">folder</span>
+												<span class="max-w-[100px] truncate">{clist.name}</span>
+											</a>
+										{/each}
+										{#if companyLists.length > 2}
+											<span class="text-grey-400 text-xs">+{companyLists.length - 2}</span>
+										{/if}
+									</div>
+								{:else}
+									<span class="text-grey-300 text-xs">No list</span>
+								{/if}
+							</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		</div>
+		{:else}
+		<!-- People lists / Company lists — redirect to All Contacts as default -->
+		<div class="border-grey-200 flex h-14 shrink-0 items-center justify-between border-b px-6">
+			<div class="flex items-center gap-3">
+				<h1 class="text-grey-900 text-base font-semibold">All Contacts</h1>
+				<span class="text-grey-500 text-sm">Select a view from the sidebar</span>
+			</div>
+		</div>
+		{/if}
+	</div>
+</div>
+
+<!-- New list modal (V9) -->
+{#if v6NewListOpen}
+	<button class="fixed inset-0 z-40 bg-black/20" onclick={() => { v6NewListOpen = false; }} aria-label="Close modal"></button>
+	<div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+		<div class="w-full max-w-sm rounded-2xl border border-grey-200 bg-white p-6 shadow-xl">
+			<h2 class="text-grey-900 mb-4 text-base font-semibold">New list</h2>
+			<label class="mb-3 block">
+				<span class="text-grey-700 mb-1 block text-sm font-medium">Name</span>
+				<input
+					type="text"
+					class="border-grey-300 text-grey-900 w-full rounded-lg border px-3 py-2 text-sm focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500"
+					placeholder="e.g. Q3 Targets"
+					bind:value={v6NewListName}
+				/>
+			</label>
+			<fieldset class="mb-5">
+				<legend class="text-grey-700 mb-1 block text-sm font-medium">Type</legend>
+				<div class="flex gap-3">
+					<label class="flex cursor-pointer items-center gap-2 text-sm text-grey-800">
+						<input type="radio" name="v9-list-type" value="people" bind:group={v6NewListType} class="accent-violet-700" />
+						People list
+					</label>
+					<label class="flex cursor-pointer items-center gap-2 text-sm text-grey-800">
+						<input type="radio" name="v9-list-type" value="company" bind:group={v6NewListType} class="accent-violet-700" />
+						Company list
+					</label>
+				</div>
+			</fieldset>
+			<div class="flex justify-end gap-2">
+				<button class="btn-ghost h-8 px-4 text-sm" onclick={() => { v6NewListOpen = false; }}>Cancel</button>
+				<button class="btn-primary h-8 px-4 text-sm" onclick={v6CreateList}>Create</button>
+			</div>
+		</div>
+	</div>
+{/if}
+
 {:else if version === 'v8'}
 <!-- V8: Lists with auto-created provenance -->
 <div class="flex h-full flex-col">
@@ -650,10 +956,12 @@
 			<h1 class="text-grey-900 text-base font-semibold">Lists</h1>
 			<span class="text-grey-500 text-sm">{v6Lists.length} lists</span>
 		</div>
-		<button class="btn-primary h-8 gap-1.5 px-3 text-sm" onclick={() => { v6NewListOpen = true; }}>
-			<span class="material-icons-round text-sm text-white">add</span>
-			New list
-		</button>
+		<div class="flex items-center gap-2">
+			<button class="btn-primary h-8 gap-1.5 px-3 text-sm" onclick={() => { v6NewListOpen = true; }}>
+				<span class="material-icons-round text-sm text-white">add</span>
+				New list
+			</button>
+		</div>
 	</div>
 
 	<!-- New list modal -->
@@ -711,7 +1019,6 @@
 					{@const listRuns = v6Store.getRunsForList(list.id)}
 					{@const activeRun = listRuns.find(r => r.status === 'running')}
 					<tr class="border-grey-100 hover:bg-grey-50 border-b transition-colors {activeRun ? 'bg-amber-50/20' : ''}">
-						<!-- Type badge -->
 						<td class="px-4 py-3">
 							{#if list.type === 'people'}
 								<span class="inline-flex items-center rounded-full bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-700">People</span>
@@ -719,7 +1026,6 @@
 								<span class="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">Company</span>
 							{/if}
 						</td>
-						<!-- Name + auto-created provenance -->
 						<td class="px-4 py-3">
 							<div class="flex items-center gap-2">
 								<a href="{svelteBase}/{$page.params.version}/app/prospects/{list.id}" class="text-grey-900 text-sm font-medium hover:text-violet-700">{list.name}</a>
@@ -736,9 +1042,7 @@
 								</p>
 							{/if}
 						</td>
-						<!-- Count -->
 						<td class="text-grey-700 px-4 py-3 text-sm">{list.memberIds.length}</td>
-						<!-- Enrichment status -->
 						<td class="px-4 py-3">
 							{#if activeRun}
 								<div class="flex items-center gap-2">
@@ -766,7 +1070,6 @@
 								<span class="text-grey-300 text-xs">—</span>
 							{/if}
 						</td>
-						<!-- Sources -->
 						<td class="px-4 py-3">
 							<div class="flex flex-wrap gap-1">
 								{#each list.sources as src}
@@ -776,11 +1079,8 @@
 								{/each}
 							</div>
 						</td>
-						<!-- Owner -->
 						<td class="text-grey-700 px-4 py-3 text-sm">{list.owner}</td>
-						<!-- Updated -->
 						<td class="text-grey-500 px-4 py-3 text-sm">{list.updatedAt}</td>
-						<!-- Actions -->
 						<td class="px-4 py-3 text-right">
 							<div class="flex items-center justify-end gap-1">
 								{#if list.type === 'people'}

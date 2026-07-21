@@ -55,8 +55,30 @@
 	];
 
 	// V3: same search sub-nav as v2, adds Lists sub-nav (Lists | All Contacts)
+	const v9Sections: SectionConfig[] = [
+		{
+			section: 'search',
+			match: '/search',
+			items: [
+				{ label: 'People', href: '/app/search/people', match: '/search/people' },
+				{ label: 'Companies', href: '/app/search/companies', match: '/search/companies' },
+			],
+		},
+		{
+			section: 'integrations',
+			match: '/integrations',
+			items: [
+				{ label: 'CRM', href: '/app/integrations', match: '/integrations' },
+				{ label: 'Engagement', href: '/app/integrations/engagement', match: '/integrations/engagement' },
+				{ label: 'API & MCP', href: '/app/integrations/api', match: '/integrations/api' },
+			],
+		},
+	];
+
 	let sections = $derived<SectionConfig[]>(
-		version === 'v6' || version === 'v7' || version === 'v8'
+		version === 'v9'
+			? v9Sections
+			: version === 'v6' || version === 'v7' || version === 'v8'
 			? v6Sections
 			: version === 'v3'
 			? [
@@ -84,11 +106,23 @@
 		if (item.match === '/integrations' && !item.match.includes('/engagement') && !item.match.includes('/api')) {
 			return route.includes('/integrations') && !route.includes('/integrations/engagement') && !route.includes('/integrations/api');
 		}
-		// For "All Contacts" (/prospects), match only exact — not /prospects/lists or /prospects/[id]
+		// V9: "Lists" tab — match /prospects exactly + /prospects/[id] detail pages, but NOT /prospects/contacts or /prospects/companies
+		if (version === 'v9' && item.match === '/prospects' && item.label === 'Lists') {
+			return (route.endsWith('/prospects') || route.endsWith('/prospects/') ||
+				(route.includes('/prospects/') && !route.includes('/prospects/contacts') && !route.includes('/prospects/companies') && !route.includes('/prospects/lists')));
+		}
+		// V9: "All Contacts" and "All Companies" tabs
+		if (item.match === '/prospects/contacts') {
+			return route.includes('/prospects/contacts');
+		}
+		if (item.match === '/prospects/companies') {
+			return route.includes('/prospects/companies');
+		}
+		// V3: "All Contacts" (/prospects), match only exact
 		if (item.match === '/prospects' && !item.match.includes('/lists')) {
 			return route.endsWith('/prospects') || route.endsWith('/prospects/');
 		}
-		// For "Lists" (/prospects/lists), also match /prospects/[id] (list detail pages)
+		// V3: "Lists" (/prospects/lists), also match /prospects/[id]
 		if (item.match === '/prospects/lists') {
 			return route.includes('/prospects/lists') || (route.includes('/prospects/') && !route.endsWith('/prospects') && !route.endsWith('/prospects/'));
 		}

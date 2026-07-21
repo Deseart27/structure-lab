@@ -140,6 +140,31 @@
 		toast.show(`${count} added to ${listName}`);
 	}
 
+	// V9 inline enrich popover state
+	let v9EnrichPopover = $state<{ index: number; type: 'email' | 'phone' } | null>(null);
+	let v9EnrichList = $state('auto');
+
+	function v9ConfirmInlineEnrich() {
+		if (!v9EnrichPopover) return;
+		const { index, type } = v9EnrichPopover;
+		const listLabel = v9EnrichList === 'auto' ? 'VP Sales · SaaS · France — Jul 21' : v9EnrichList;
+		v9EnrichPopover = null;
+		v9EnrichList = 'auto';
+		// Start enrichment animation
+		const next = new Set(v6Enriching);
+		next.add(index);
+		v6Enriching = next;
+		setTimeout(() => {
+			const enriching = new Set(v6Enriching);
+			enriching.delete(index);
+			v6Enriching = enriching;
+			const enriched = new Set(v6Enriched);
+			enriched.add(index);
+			v6Enriched = enriched;
+			toast.show(`${type === 'email' ? 'Email' : 'Phone'} found — added to "${listLabel}"`);
+		}, 2500);
+	}
+
 	$effect(() => {
 		// Close add-to-list popover when selection clears
 		if (v6Selected.size === 0) v6AddToListOpen = false;
@@ -185,7 +210,7 @@
 					<span class="material-icons-round text-sm text-white">auto_awesome</span>
 					Enrich
 				</button>
-			{:else if version === 'v6' || version === 'v7' || version === 'v8'}
+			{:else if version === 'v6' || version === 'v7' || version === 'v8' || version === 'v9'}
 				{#if v6Selected.size > 0}
 					<span class="text-grey-500 mr-1 text-sm">{v6Selected.size} selected</span>
 				{/if}
@@ -257,7 +282,7 @@
 				<!-- Enrich — always active -->
 				<button
 					class="btn-primary h-8 gap-1 px-3 text-sm"
-					onclick={() => { if (v6Selected.size > 0) { v6EnrichModalOpen = true; } else { toast.show('Select contacts to enrich'); } }}
+					onclick={() => { if (v6Selected.size > 0) { v6ModalList = version === 'v9' ? 'auto' : 'none'; v6EnrichModalOpen = true; } else { toast.show('Select contacts to enrich'); } }}
 				>
 					<span class="material-icons-round text-sm text-white">auto_awesome</span>
 					Enrich
@@ -287,7 +312,7 @@
 		</div>
 	</div>
 
-	{#if version === 'v6' || version === 'v7' || version === 'v8'}
+	{#if version === 'v6' || version === 'v7' || version === 'v8' || version === 'v9'}
 		<!-- V6/V7 search query chip -->
 		<div class="border-grey-100 flex shrink-0 items-center gap-2 border-b px-6 py-2.5">
 			<span class="text-grey-500 text-xs font-semibold uppercase tracking-wider">Search</span>
@@ -369,13 +394,50 @@
 										Finding…
 									</span>
 								{:else}
-									<button
-										class="flex h-7 items-center gap-1 rounded-lg border border-grey-200 bg-white px-2 text-xs font-medium text-grey-600 shadow-sm transition-colors hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700"
-										onclick={() => v6EnrichRow(i)}
-									>
-										<span class="material-icons-round text-sm">mail</span>
-										Find email
-									</button>
+									<div class="relative">
+										<button
+											class="flex h-7 items-center gap-1 rounded-lg border border-grey-200 bg-white px-2 text-xs font-medium text-grey-600 shadow-sm transition-colors hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700"
+											onclick={() => { if (version === 'v9') { v9EnrichPopover = { index: i, type: 'email' }; v9EnrichList = 'auto'; } else { v6EnrichRow(i); } }}
+										>
+											<span class="material-icons-round text-sm">mail</span>
+											Find email
+										</button>
+										{#if version === 'v9' && v9EnrichPopover?.index === i && v9EnrichPopover?.type === 'email'}
+											<button class="fixed inset-0 z-30" onclick={() => { v9EnrichPopover = null; }} aria-label="Close"></button>
+											<div class="absolute left-0 top-full z-40 mt-1 w-64 rounded-xl border border-grey-200 bg-white p-4 shadow-xl">
+												<div class="mb-3 flex items-center gap-2">
+													<div class="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-50">
+														<span class="material-icons-round text-sm text-violet-600">mail</span>
+													</div>
+													<div>
+														<p class="text-grey-900 text-sm font-semibold">Find email</p>
+														<p class="text-grey-500 text-xs">{person.name}</p>
+													</div>
+												</div>
+												<div class="mb-3 flex items-center justify-between rounded-lg bg-grey-50 px-3 py-2">
+													<span class="text-grey-600 text-xs">Cost</span>
+													<span class="text-grey-900 text-sm font-semibold">1 credit</span>
+												</div>
+												<p class="text-grey-500 mb-1.5 text-xs font-semibold uppercase tracking-wider">Add to list</p>
+												<select
+													bind:value={v9EnrichList}
+													class="border-grey-200 text-grey-800 mb-3 w-full rounded-lg border px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
+												>
+													<option value="auto">Auto-create list</option>
+													{#each v6Store.lists.filter(l => l.type === 'people') as list}
+														<option value={list.name}>{list.name}</option>
+													{/each}
+												</select>
+												<button
+													class="btn-primary h-8 w-full gap-1 text-sm"
+													onclick={v9ConfirmInlineEnrich}
+												>
+													<span class="material-icons-round text-sm text-white">mail</span>
+													Find email
+												</button>
+											</div>
+										{/if}
+									</div>
 								{/if}
 							</td>
 							<!-- Phone -->
@@ -391,13 +453,50 @@
 										Finding…
 									</span>
 								{:else}
-									<button
-										class="flex h-7 items-center gap-1 rounded-lg border border-grey-200 bg-white px-2 text-xs font-medium text-grey-600 shadow-sm transition-colors hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700"
-										onclick={() => v6EnrichRow(i)}
-									>
-										<span class="material-icons-round text-sm">phone</span>
-										Find phone
-									</button>
+									<div class="relative">
+										<button
+											class="flex h-7 items-center gap-1 rounded-lg border border-grey-200 bg-white px-2 text-xs font-medium text-grey-600 shadow-sm transition-colors hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700"
+											onclick={() => { if (version === 'v9') { v9EnrichPopover = { index: i, type: 'phone' }; v9EnrichList = 'auto'; } else { v6EnrichRow(i); } }}
+										>
+											<span class="material-icons-round text-sm">phone</span>
+											Find phone
+										</button>
+										{#if version === 'v9' && v9EnrichPopover?.index === i && v9EnrichPopover?.type === 'phone'}
+											<button class="fixed inset-0 z-30" onclick={() => { v9EnrichPopover = null; }} aria-label="Close"></button>
+											<div class="absolute left-0 top-full z-40 mt-1 w-64 rounded-xl border border-grey-200 bg-white p-4 shadow-xl">
+												<div class="mb-3 flex items-center gap-2">
+													<div class="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-50">
+														<span class="material-icons-round text-sm text-blue-600">phone</span>
+													</div>
+													<div>
+														<p class="text-grey-900 text-sm font-semibold">Find phone</p>
+														<p class="text-grey-500 text-xs">{person.name}</p>
+													</div>
+												</div>
+												<div class="mb-3 flex items-center justify-between rounded-lg bg-grey-50 px-3 py-2">
+													<span class="text-grey-600 text-xs">Cost</span>
+													<span class="text-grey-900 text-sm font-semibold">1 credit</span>
+												</div>
+												<p class="text-grey-500 mb-1.5 text-xs font-semibold uppercase tracking-wider">Add to list</p>
+												<select
+													bind:value={v9EnrichList}
+													class="border-grey-200 text-grey-800 mb-3 w-full rounded-lg border px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
+												>
+													<option value="auto">Auto-create list</option>
+													{#each v6Store.lists.filter(l => l.type === 'people') as list}
+														<option value={list.name}>{list.name}</option>
+													{/each}
+												</select>
+												<button
+													class="btn-primary h-8 w-full gap-1 text-sm"
+													onclick={v9ConfirmInlineEnrich}
+												>
+													<span class="material-icons-round text-sm text-blue-100">phone</span>
+													Find phone
+												</button>
+											</div>
+										{/if}
+									</div>
 								{/if}
 							</td>
 							<!-- Quick add to list -->
@@ -483,17 +582,34 @@
 						</label>
 					</div>
 
-					<!-- Add to list (optional) -->
-					<p class="text-grey-500 mb-2 text-xs font-semibold uppercase tracking-wider">Add to a list <span class="font-normal normal-case text-grey-400">(optional)</span></p>
-					<select
-						bind:value={v6ModalList}
-						class="border-grey-200 text-grey-800 mb-6 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
-					>
-						<option value="none">No list</option>
-						<option value="Q3 Targets">Q3 Targets</option>
-						<option value="Sales Leaders DACH">Sales Leaders DACH</option>
-						<option value="new">Create new list…</option>
-					</select>
+					<!-- Add to list -->
+					{#if version === 'v9'}
+						<p class="text-grey-500 mb-2 text-xs font-semibold uppercase tracking-wider">Add to list</p>
+						<select
+							bind:value={v6ModalList}
+							class="border-grey-200 text-grey-800 mb-2 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
+						>
+							<option value="auto">Auto-create list</option>
+							{#each v6Store.lists.filter(l => l.type === 'people') as list}
+								<option value={list.name}>{list.name}</option>
+							{/each}
+						</select>
+						<div class="mb-6 flex items-center justify-between rounded-lg bg-grey-50 px-3 py-2">
+							<span class="text-grey-600 text-xs">Cost</span>
+							<span class="text-grey-900 text-sm font-semibold">{v6Selected.size} credits</span>
+						</div>
+					{:else}
+						<p class="text-grey-500 mb-2 text-xs font-semibold uppercase tracking-wider">Add to a list <span class="font-normal normal-case text-grey-400">(optional)</span></p>
+						<select
+							bind:value={v6ModalList}
+							class="border-grey-200 text-grey-800 mb-6 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
+						>
+							<option value="none">No list</option>
+							<option value="Q3 Targets">Q3 Targets</option>
+							<option value="Sales Leaders DACH">Sales Leaders DACH</option>
+							<option value="new">Create new list…</option>
+						</select>
+					{/if}
 
 					<div class="flex items-center justify-end gap-2">
 						<button class="btn-ghost h-9 px-4 text-sm" onclick={() => { v6EnrichModalOpen = false; }}>Cancel</button>

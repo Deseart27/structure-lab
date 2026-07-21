@@ -10,12 +10,20 @@
 	let version = $derived($page.params.version);
 	let basePath = $derived(`${svelteBase}/${version}`);
 
-	// V7 onboarding — shown once per session
-	let v7OnboardingDone = $state(false);
-	let v7ShowOnboarding = $derived((version === 'v7' || version === 'v8') && !v7OnboardingDone);
+	// V7 onboarding — shown once per session, survives component remounts via globalThis
+	const _g = globalThis as Record<string, unknown>;
+	if (!_g.__onboardedVersions) _g.__onboardedVersions = new Set<string>();
+	const onboardedVersions = _g.__onboardedVersions as Set<string>;
+
+	// Reactive counter to force re-evaluation when the set changes
+	let onboardingTick = $state(0);
+	let v7ShowOnboarding = $derived(
+		onboardingTick >= 0 && (version === 'v7' || version === 'v8' || version === 'v9') && !onboardedVersions.has(version)
+	);
 
 	function v7PickUseCase(route: string) {
-		v7OnboardingDone = true;
+		onboardedVersions.add(version);
+		onboardingTick++;
 		goto(`${basePath}${route}`);
 	}
 </script>
@@ -149,7 +157,7 @@
 
 			<button
 				class="text-grey-400 hover:text-grey-600 mt-8 text-sm underline transition-colors"
-				onclick={() => { v7OnboardingDone = true; }}
+				onclick={() => { onboardedVersions.add(version); onboardingTick++; }}
 			>
 				Skip, take me to the dashboard
 			</button>
@@ -160,7 +168,7 @@
 {:else}
 <div class="flex min-h-screen min-w-screen flex-col">
 	<Navbar />
-	{#if version === 'v2' || version === 'v3' || version === 'v6'}
+	{#if version === 'v2' || version === 'v3' || version === 'v6' || version === 'v7' || version === 'v8' || version === 'v9'}
 		<SubNav />
 	{/if}
 	{@render children()}

@@ -668,78 +668,8 @@
 </div>
 
 {:else if version === 'v9'}
-<!-- V9: Sidebar with Contacts section (all contacts + people lists) and Companies section (all companies + company lists) -->
-<div class="flex h-full">
-	<!-- Left sidebar -->
-	<div class="border-grey-200 flex w-56 shrink-0 flex-col border-r bg-white overflow-y-auto">
-		<!-- Owner filter -->
-		<div class="px-3 pt-4 pb-2">
-			<div class="flex items-center rounded-lg border border-grey-200 p-0.5">
-				<button
-					class="flex-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors {v9OwnerFilter === 'mine' ? 'bg-grey-100 text-grey-900' : 'text-grey-500 hover:text-grey-700'}"
-					onclick={() => { v9OwnerFilter = 'mine'; }}
-				>My lists</button>
-				<button
-					class="flex-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors {v9OwnerFilter === 'all' ? 'bg-grey-100 text-grey-900' : 'text-grey-500 hover:text-grey-700'}"
-					onclick={() => { v9OwnerFilter = 'all'; }}
-				>All</button>
-			</div>
-		</div>
-
-		<!-- Contacts section -->
-		<div class="px-3 pt-3 pb-1">
-			<p class="text-grey-400 mb-1 px-2 text-[10px] font-semibold uppercase tracking-wider">Contacts</p>
-		</div>
-		<nav class="flex flex-col gap-0.5 px-3">
-			<button
-				class="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition-colors {v9View === 'all-contacts' ? 'bg-violet-50 text-violet-700' : 'text-grey-600 hover:bg-grey-50 hover:text-grey-900'}"
-				onclick={() => { v9View = 'all-contacts'; }}
-			>
-				<span class="material-icons-round text-base {v9View === 'all-contacts' ? 'text-violet-500' : 'text-grey-400'}">people</span>
-				All Contacts
-				<span class="text-grey-400 ml-auto text-xs">{v6Store.contacts.length}</span>
-			</button>
-			{#each v9PeopleLists as list}
-				<a
-					href="{base}/app/prospects/{list.id}"
-					class="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm transition-colors text-grey-600 hover:bg-grey-50 hover:text-grey-900"
-				>
-					<span class="material-icons-round text-grey-300 text-base">folder</span>
-					<span class="truncate flex-1">{list.name}</span>
-					<span class="text-grey-400 text-xs">{list.memberIds.length}</span>
-				</a>
-			{/each}
-		</nav>
-
-		<!-- Companies section -->
-		<div class="px-3 pt-4 pb-1">
-			<p class="text-grey-400 mb-1 px-2 text-[10px] font-semibold uppercase tracking-wider">Companies</p>
-		</div>
-		<nav class="flex flex-col gap-0.5 px-3 pb-4">
-			<button
-				class="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition-colors {v9View === 'all-companies' ? 'bg-violet-50 text-violet-700' : 'text-grey-600 hover:bg-grey-50 hover:text-grey-900'}"
-				onclick={() => { v9View = 'all-companies'; }}
-			>
-				<span class="material-icons-round text-base {v9View === 'all-companies' ? 'text-violet-500' : 'text-grey-400'}">domain</span>
-				All Companies
-				<span class="text-grey-400 ml-auto text-xs">{v6Store.companies.length}</span>
-			</button>
-			{#each v9CompanyLists as list}
-				<a
-					href="{base}/app/prospects/{list.id}"
-					class="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm transition-colors text-grey-600 hover:bg-grey-50 hover:text-grey-900"
-				>
-					<span class="material-icons-round text-grey-300 text-base">folder</span>
-					<span class="truncate flex-1">{list.name}</span>
-					<span class="text-grey-400 text-xs">{list.memberIds.length}</span>
-				</a>
-			{/each}
-		</nav>
-	</div>
-
-	<!-- Main content -->
-	<div class="flex flex-1 flex-col overflow-hidden">
-		{#if v9View === 'all-contacts'}
+<!-- V9: All Contacts default view (sidebar is in layout) -->
+<div class="flex h-full flex-col">
 		<!-- All Contacts view -->
 		<div class="border-grey-200 flex h-14 shrink-0 items-center justify-between border-b px-6">
 			<div class="flex items-center gap-3">
@@ -831,86 +761,7 @@
 			</table>
 		</div>
 
-		{:else if v9View === 'all-companies'}
-		<!-- All Companies view -->
-		<div class="border-grey-200 flex h-14 shrink-0 items-center justify-between border-b px-6">
-			<div class="flex items-center gap-3">
-				<h1 class="text-grey-900 text-base font-semibold">All Companies</h1>
-				<span class="text-grey-500 text-sm">{v6Store.companies.length} companies</span>
-			</div>
-			<div class="flex items-center gap-2">
-				<button class="btn-primary h-8 gap-1.5 px-3 text-sm" onclick={() => { v6NewListOpen = true; }}>
-					<span class="material-icons-round text-sm text-white">add</span>
-					New list
-				</button>
-			</div>
-		</div>
-		<div class="flex-1 overflow-auto">
-			<table class="w-full min-w-[1000px]">
-				<thead class="sticky top-0 z-10">
-					<tr class="table-header">
-						<th class="text-grey-600 px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider">Company</th>
-						<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Domain</th>
-						<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Industry</th>
-						<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Headcount</th>
-						<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Location</th>
-						<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Founded</th>
-						<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">In lists</th>
-					</tr>
-				</thead>
-				<tbody class="bg-white">
-					{#each v6Store.companies as company}
-						{@const companyLists = v6Store.getListsForCompany(company.id)}
-						<tr class="border-grey-100 hover:bg-grey-50 border-b transition-colors">
-							<td class="px-5 py-3">
-								<div>
-									<p class="text-grey-900 text-sm font-medium">{company.name}</p>
-									<p class="text-grey-400 text-xs">{company.type}</p>
-								</div>
-							</td>
-							<td class="px-4 py-3">
-								<span class="text-grey-700 font-mono text-xs">{company.domain}</span>
-							</td>
-							<td class="text-grey-700 px-4 py-3 text-sm">{company.industry}</td>
-							<td class="text-grey-700 px-4 py-3 text-sm">{company.headcount.toLocaleString()}</td>
-							<td class="text-grey-600 px-4 py-3 text-sm">{company.location}</td>
-							<td class="text-grey-600 px-4 py-3 text-sm">{company.yearFounded}</td>
-							<td class="px-4 py-3">
-								{#if companyLists.length > 0}
-									<div class="flex flex-wrap gap-1">
-										{#each companyLists.slice(0, 2) as clist}
-											<a
-												href="{base}/app/prospects/{clist.id}"
-												class="inline-flex items-center gap-1 rounded-full border border-grey-200 bg-grey-50 px-2 py-0.5 text-xs font-medium text-grey-700 hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700 transition-colors"
-											>
-												<span class="material-icons-round text-[10px]">folder</span>
-												<span class="max-w-[100px] truncate">{clist.name}</span>
-											</a>
-										{/each}
-										{#if companyLists.length > 2}
-											<span class="text-grey-400 text-xs">+{companyLists.length - 2}</span>
-										{/if}
-									</div>
-								{:else}
-									<span class="text-grey-300 text-xs">No list</span>
-								{/if}
-							</td>
-						</tr>
-					{/each}
-				</tbody>
-			</table>
-		</div>
-		{:else}
-		<!-- People lists / Company lists — redirect to All Contacts as default -->
-		<div class="border-grey-200 flex h-14 shrink-0 items-center justify-between border-b px-6">
-			<div class="flex items-center gap-3">
-				<h1 class="text-grey-900 text-base font-semibold">All Contacts</h1>
-				<span class="text-grey-500 text-sm">Select a view from the sidebar</span>
-			</div>
-		</div>
-		{/if}
 	</div>
-</div>
 
 <!-- New list modal (V9) -->
 {#if v6NewListOpen}

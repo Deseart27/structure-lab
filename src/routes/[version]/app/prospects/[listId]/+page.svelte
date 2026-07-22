@@ -509,9 +509,6 @@
 	<!-- Header -->
 	<div class="border-grey-200 flex h-14 shrink-0 items-center justify-between border-b px-6">
 		<div class="flex items-center gap-3">
-			<a href="{base}/app/prospects" class="btn-ghost flex h-8 w-8 items-center justify-center rounded-lg p-0">
-				<span class="material-icons-round text-grey-600 text-lg">arrow_back</span>
-			</a>
 			<h1 class="text-grey-900 text-base font-semibold">{v8List.name}</h1>
 			{#if v8List.autoCreated}
 				<span class="inline-flex items-center gap-1 rounded-full border border-dashed border-grey-300 px-1.5 py-0.5 text-[10px] text-grey-400">

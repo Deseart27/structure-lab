@@ -1,0 +1,1 @@
+import{K as e,X as t,Z as n,n as r,q as i}from"../chunks/i6kH676P.js";import{c as a,t as o}from"../chunks/TM2Q_5sZ.js";import"../chunks/xihTtKlq.js";import{t as s}from"../chunks/DoeyQj2K.js";import"../chunks/UypqsJdK.js";function c(c,l){n(l,!0);let u=()=>i(s,`$page`,d),[d,f]=e();r(()=>o(`${a}/${u().params.version}/app/find/people`)),t(),f()}export{c as component};

@@ -1,0 +1,1 @@
+import{H as e,U as t,k as n}from"./i6kH676P.js";var r=t(``),i=null,a={get message(){return n(r)},show(t,n=2e3){i&&clearTimeout(i),e(r,t,!0),i=setTimeout(()=>{e(r,``)},n)}};export{a as t};

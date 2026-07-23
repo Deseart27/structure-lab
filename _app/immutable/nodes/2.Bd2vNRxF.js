@@ -1,0 +1,1 @@
+import{G as e,K as t,S as n,X as r,Z as i,g as a,q as o,x as s,z as c}from"../chunks/i6kH676P.js";import"../chunks/xihTtKlq.js";import{t as l}from"../chunks/DoeyQj2K.js";function u(u,d){i(d,!0);let f=()=>o(l,`$page`,p),[p,m]=t();e(()=>f().params.version);var h=n();a(c(h),()=>d.children),s(u,h),r(),m()}export{u as component};

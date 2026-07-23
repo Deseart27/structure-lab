@@ -149,7 +149,7 @@
 		const { index, type } = v9EnrichPopover;
 		const listLabel = v9EnrichList === 'auto' ? 'VP Sales · SaaS · France — Jul 21' : v9EnrichList;
 		v9EnrichPopover = null;
-		v9EnrichList = 'auto';
+		v9EnrichList = 'none';
 		// Start enrichment animation
 		const next = new Set(v6Enriching);
 		next.add(index);
@@ -282,7 +282,7 @@
 				<!-- Enrich — always active -->
 				<button
 					class="btn-primary h-8 gap-1 px-3 text-sm"
-					onclick={() => { if (v6Selected.size > 0) { v6ModalList = version === 'v9' ? 'auto' : 'none'; v6EnrichModalOpen = true; } else { toast.show('Select contacts to enrich'); } }}
+					onclick={() => { if (v6Selected.size > 0) { v6ModalList = 'none'; v6EnrichModalOpen = true; } else { toast.show('Select contacts to enrich'); } }}
 				>
 					<span class="material-icons-round text-sm text-white">auto_awesome</span>
 					Enrich
@@ -397,7 +397,7 @@
 									<div class="relative">
 										<button
 											class="flex h-7 items-center gap-1 rounded-lg border border-grey-200 bg-white px-2 text-xs font-medium text-grey-600 shadow-sm transition-colors hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700"
-											onclick={() => { if (version === 'v9') { v9EnrichPopover = { index: i, type: 'email' }; v9EnrichList = 'auto'; } else { v6EnrichRow(i); } }}
+											onclick={() => { if (version === 'v9') { v9EnrichPopover = { index: i, type: 'email' }; v9EnrichList = 'none'; } else { v6EnrichRow(i); } }}
 										>
 											<span class="material-icons-round text-sm">mail</span>
 											Find email
@@ -418,12 +418,12 @@
 													<span class="text-grey-600 text-xs">Cost</span>
 													<span class="text-grey-900 text-sm font-semibold">1 credit</span>
 												</div>
-												<p class="text-grey-500 mb-1.5 text-xs font-semibold uppercase tracking-wider">Add to list</p>
+												<p class="text-grey-500 mb-1 text-[10px] font-semibold uppercase tracking-wider">Add to list <span class="font-normal normal-case text-grey-400">(optional)</span></p>
 												<select
 													bind:value={v9EnrichList}
 													class="border-grey-200 text-grey-800 mb-3 w-full rounded-lg border px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
 												>
-													<option value="auto">Auto-create list</option>
+													<option value="none">No list</option>
 													{#each v6Store.lists.filter(l => l.type === 'people') as list}
 														<option value={list.name}>{list.name}</option>
 													{/each}
@@ -456,7 +456,7 @@
 									<div class="relative">
 										<button
 											class="flex h-7 items-center gap-1 rounded-lg border border-grey-200 bg-white px-2 text-xs font-medium text-grey-600 shadow-sm transition-colors hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700"
-											onclick={() => { if (version === 'v9') { v9EnrichPopover = { index: i, type: 'phone' }; v9EnrichList = 'auto'; } else { v6EnrichRow(i); } }}
+											onclick={() => { if (version === 'v9') { v9EnrichPopover = { index: i, type: 'phone' }; v9EnrichList = 'none'; } else { v6EnrichRow(i); } }}
 										>
 											<span class="material-icons-round text-sm">phone</span>
 											Find phone
@@ -477,12 +477,12 @@
 													<span class="text-grey-600 text-xs">Cost</span>
 													<span class="text-grey-900 text-sm font-semibold">1 credit</span>
 												</div>
-												<p class="text-grey-500 mb-1.5 text-xs font-semibold uppercase tracking-wider">Add to list</p>
+												<p class="text-grey-500 mb-1 text-[10px] font-semibold uppercase tracking-wider">Add to list <span class="font-normal normal-case text-grey-400">(optional)</span></p>
 												<select
 													bind:value={v9EnrichList}
 													class="border-grey-200 text-grey-800 mb-3 w-full rounded-lg border px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
 												>
-													<option value="auto">Auto-create list</option>
+													<option value="none">No list</option>
 													{#each v6Store.lists.filter(l => l.type === 'people') as list}
 														<option value={list.name}>{list.name}</option>
 													{/each}
@@ -582,14 +582,14 @@
 						</label>
 					</div>
 
-					<!-- Add to list -->
+					<!-- Add to list + Cost -->
 					{#if version === 'v9'}
-						<p class="text-grey-500 mb-2 text-xs font-semibold uppercase tracking-wider">Add to list</p>
+						<p class="text-grey-500 mb-2 text-xs font-semibold uppercase tracking-wider">Add to a list <span class="font-normal normal-case text-grey-400">(optional)</span></p>
 						<select
 							bind:value={v6ModalList}
-							class="border-grey-200 text-grey-800 mb-2 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
+							class="border-grey-200 text-grey-800 mb-4 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
 						>
-							<option value="auto">Auto-create list</option>
+							<option value="none">No list</option>
 							{#each v6Store.lists.filter(l => l.type === 'people') as list}
 								<option value={list.name}>{list.name}</option>
 							{/each}

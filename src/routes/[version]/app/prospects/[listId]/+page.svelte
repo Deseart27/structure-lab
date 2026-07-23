@@ -44,6 +44,29 @@
 	// V9: selected enrichment run for filtering
 	let v9SelectedRun = $state<string | null>(null);
 
+	// V9: contact selection
+	let v9ListSelected = $state(new Set<string>());
+	let v9DisplayContacts = $derived(
+		(v9SelectedRun ? v8Contacts.filter(c => { const run = v6Store.getLastRunForContact(c.id); return run && run.id === v9SelectedRun; }) : [...v8Contacts])
+			.sort((a, b) => {
+				const aEnriched = a.email ? 1 : 0;
+				const bEnriched = b.email ? 1 : 0;
+				return bEnriched - aEnriched;
+			})
+	);
+	function v9ListToggleContact(id: string) {
+		const next = new Set(v9ListSelected);
+		if (next.has(id)) next.delete(id); else next.add(id);
+		v9ListSelected = next;
+	}
+	function v9ListToggleAll() {
+		if (v9ListSelected.size === v9DisplayContacts.length) {
+			v9ListSelected = new Set();
+		} else {
+			v9ListSelected = new Set(v9DisplayContacts.map(c => c.id));
+		}
+	}
+
 	const emailStatusStyles: Record<string, { label: string; color: string }> = {
 		valid:          { label: 'Valid',         color: 'text-emerald-700 bg-emerald-50' },
 		'catch-all':    { label: 'Catch-all',     color: 'text-amber-700 bg-amber-50' },
@@ -510,12 +533,6 @@
 	<div class="border-grey-200 flex h-14 shrink-0 items-center justify-between border-b px-6">
 		<div class="flex items-center gap-3">
 			<h1 class="text-grey-900 text-base font-semibold">{v8List.name}</h1>
-			{#if v8List.autoCreated}
-				<span class="inline-flex items-center gap-1 rounded-full border border-dashed border-grey-300 px-1.5 py-0.5 text-[10px] text-grey-400">
-					<span class="material-icons-round text-[10px]">auto_awesome</span>
-					auto
-				</span>
-			{/if}
 			{#if v8List.type === 'people'}
 				<span class="inline-flex items-center rounded-full bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-700">People</span>
 				<span class="text-grey-500 text-sm">{v8Contacts.length} contacts</span>
@@ -531,12 +548,10 @@
 			{/if}
 		</div>
 		<div class="flex items-center gap-2">
-			{#if v8List.type === 'people'}
-				<a href="{base}/app/enrich" class="btn-ghost h-8 gap-1.5 px-3 text-sm">
-					<span class="material-icons-round text-violet-600 text-base">auto_awesome</span>
-					Enrich
-				</a>
-			{/if}
+			<button class="btn-ghost h-8 gap-1.5 px-3 text-sm" onclick={() => toast.show('Add contact — coming soon')}>
+				<span class="material-icons-round text-grey-600 text-base">person_add</span>
+				Add contact
+			</button>
 			<div class="relative">
 				<button class="btn-ghost h-8 gap-1.5 px-3 text-sm" onclick={() => { v6ExportOpen = !v6ExportOpen; }}>
 					<span class="material-icons-round text-grey-600 text-base">download</span>
@@ -546,13 +561,16 @@
 				<ExportPopover
 					bind:open={v6ExportOpen}
 					context={v8List.type === 'people' ? 'people' : 'companies'}
-					count={v8List.memberIds.length}
+					count={v9ListSelected.size > 0 ? v9ListSelected.size : v8List.memberIds.length}
 					sourceName={v8List.name}
 				/>
 			</div>
-			<button class="btn-ghost h-8 gap-1.5 px-3 text-sm" onclick={() => toast.show('Add contacts — coming soon')}>
-				<span class="material-icons-round text-grey-600 text-base">person_add</span>
-				Add contacts
+			<button
+				class="btn-primary h-8 gap-1.5 px-3 text-sm"
+				onclick={() => toast.show(`Enriching ${v9ListSelected.size > 0 ? v9ListSelected.size : v8Contacts.length} contacts…`)}
+			>
+				<span class="material-icons-round text-sm text-white">auto_awesome</span>
+				Enrich
 			</button>
 		</div>
 	</div>
@@ -561,34 +579,37 @@
 	<div class="flex flex-1 overflow-hidden">
 		<!-- Contact table -->
 		<div class="flex-1 overflow-auto">
-			{#if v8List.autoCreated && v8List.autoCreatedFrom}
-				<div class="border-b border-grey-100 bg-grey-50/50 px-6 py-2.5">
-					<div class="flex items-center gap-2 text-xs text-grey-500">
-						<span class="material-icons-round text-sm text-grey-400">info</span>
-						Auto-created from
-						<span class="font-medium text-grey-700">{v8List.autoCreatedFrom.type === 'csv' ? 'CSV' : v8List.autoCreatedFrom.type === 'search' ? 'Search' : 'Enrichment'}: {v8List.autoCreatedFrom.name}</span>
-						<span class="text-grey-300">·</span>
-						<button class="text-violet-600 hover:text-violet-700 font-medium" onclick={() => toast.show('List is now a regular list')}>Make permanent</button>
-					</div>
-				</div>
-			{/if}
-
 			{#if v8List.type === 'people'}
 				<table class="w-full min-w-[800px]">
 					<thead class="sticky top-0 z-10">
 						<tr class="table-header">
+							<th class="w-10 px-3 py-3">
+								<input
+									type="checkbox"
+									checked={v9ListSelected.size === v9DisplayContacts.length && v9DisplayContacts.length > 0}
+									onchange={v9ListToggleAll}
+									class="accent-violet-700"
+								/>
+							</th>
 							<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Name</th>
 							<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Company</th>
 							<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Title</th>
 							<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Email</th>
 							<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Phone</th>
-							<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Email status</th>
-							<th class="w-12 px-4 py-3"></th>
+							<th class="w-10 px-2 py-3"></th>
 						</tr>
 					</thead>
 					<tbody class="bg-white">
-						{#each v9SelectedRun ? v8Contacts.filter(c => { const run = v6Store.getLastRunForContact(c.id); return run && run.id === v9SelectedRun; }) : v8Contacts as contact}
-							<tr class="border-grey-100 hover:bg-grey-50 border-b transition-colors">
+						{#each v9DisplayContacts as contact}
+							<tr class="border-grey-100 hover:bg-grey-50 border-b transition-colors {v9ListSelected.has(contact.id) ? 'bg-violet-50/40' : ''}">
+								<td class="w-10 px-3 py-3">
+									<input
+										type="checkbox"
+										checked={v9ListSelected.has(contact.id)}
+										onchange={() => v9ListToggleContact(contact.id)}
+										class="accent-violet-700"
+									/>
+								</td>
 								<td class="px-4 py-3">
 									<p class="text-grey-900 text-sm font-medium">{contact.firstName} {contact.lastName}</p>
 								</td>
@@ -596,34 +617,43 @@
 								<td class="text-grey-600 px-4 py-3 text-sm">{contact.title}</td>
 								<td class="px-4 py-3">
 									{#if contact.email}
-										<span class="text-grey-900 font-mono text-xs">{contact.email}</span>
+										<div class="flex items-center gap-1.5">
+											<span class="material-icons-round text-sm text-pink-400">email</span>
+											<span class="text-grey-900 font-mono text-xs font-semibold">{contact.email}</span>
+											{#if contact.emailStatus === 'valid'}
+												<span class="material-icons-round text-sm text-emerald-500">check_circle</span>
+											{/if}
+										</div>
 									{:else}
 										<span class="text-grey-300 text-xs">—</span>
 									{/if}
 								</td>
 								<td class="px-4 py-3">
 									{#if contact.phone}
-										<span class="text-grey-900 font-mono text-xs">{contact.phone}</span>
+										<div class="flex items-center gap-1.5">
+											<span class="material-icons-round text-sm text-violet-400">phone</span>
+											<span class="text-grey-900 font-mono text-xs">{contact.phone}</span>
+										</div>
 									{:else}
-										<span class="text-grey-300 text-xs">—</span>
+										<button
+											class="flex h-7 items-center gap-1 rounded-lg border border-grey-200 px-2 text-xs font-medium text-grey-500 transition-colors hover:border-violet-300 hover:text-violet-600"
+											onclick={() => toast.show(`Finding phone for ${contact.firstName}…`)}
+										>
+											<span class="material-icons-round text-xs">phone</span>
+											Find phone
+										</button>
 									{/if}
 								</td>
-								<td class="px-4 py-3">
-									{#if emailStatusStyles[contact.emailStatus]}
-										<span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium {emailStatusStyles[contact.emailStatus].color}">
-											{emailStatusStyles[contact.emailStatus].label}
-										</span>
-									{:else}
-										<span class="text-grey-300 text-xs">—</span>
-									{/if}
-								</td>
-								<td class="px-4 py-3 text-right">
+								<td class="px-1 py-3">
 									<button
-										class="btn-ghost h-7 w-7 p-0"
-										title="Remove from list"
-										onclick={() => toast.show(`${contact.firstName} ${contact.lastName} removed from list`)}
+										class="flex h-7 w-7 items-center justify-center rounded-lg transition-colors {contact.hubspotSynced ? 'opacity-100' : 'opacity-40 hover:opacity-70'}"
+										title={contact.hubspotSynced ? 'Already in HubSpot' : 'Push to HubSpot'}
+										onclick={() => toast.show(contact.hubspotSynced ? `${contact.firstName} ${contact.lastName} is already in HubSpot` : `Pushing ${contact.firstName} ${contact.lastName} to HubSpot…`)}
 									>
-										<span class="material-icons-round text-grey-400 text-base">close</span>
+										<svg class="h-3.5 w-3.5" viewBox="0 0 1024 1024">
+											<circle cx="512" cy="512" r="512" fill={contact.hubspotSynced ? '#FF7A59' : '#9CA3AF'}/>
+											<path d="M623.8 624.94c-38.23 0-69.24-30.67-69.24-68.51s31-68.52 69.24-68.52 69.26 30.67 69.26 68.52-31 68.51-69.26 68.51m20.74-200.42v-61a46.83 46.83 0 0 0 27.33-42.29v-1.41c0-25.78-21.32-46.86-47.35-46.86h-1.43c-26 0-47.35 21.09-47.35 46.86v1.41a46.85 46.85 0 0 0 27.33 42.29v61a135.08 135.08 0 0 0-63.86 27.79l-169.1-130.17A52.49 52.49 0 0 0 372 309c0-29.21-23.89-52.92-53.4-53s-53.45 23.59-53.48 52.81 23.85 52.88 53.36 52.93a53.29 53.29 0 0 0 26.33-7.09l166.38 128.1a132.14 132.14 0 0 0 2.07 150.3l-50.62 50.1A43.42 43.42 0 1 0 450.1 768c24.24 0 43.9-19.46 43.9-43.45a42.24 42.24 0 0 0-2-12.42l50-49.52a135.28 135.28 0 0 0 81.8 27.47c74.61 0 135.06-59.83 135.06-133.65 0-66.82-49.62-122-114.33-131.91" fill="#fff" fill-rule="evenodd"/>
+										</svg>
 									</button>
 								</td>
 							</tr>
@@ -724,32 +754,32 @@
 						<button class="text-violet-600 hover:text-violet-700 text-xs font-medium" onclick={() => { v9SelectedRun = null; }}>Show all</button>
 					{/if}
 				</div>
-				<div class="flex flex-col gap-2">
+				<div class="flex flex-col gap-0.5">
 					{#each v8ListRuns as run}
 						<button
-							class="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-left transition-all
-								{v9SelectedRun === run.id ? 'border-2 border-violet-400 bg-violet-50/50 shadow-sm' : v9SelectedRun ? 'border border-grey-100 bg-white opacity-50' : 'border border-grey-100 bg-white hover:border-grey-200 hover:bg-grey-50'}"
+							class="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-left transition-all group
+								{v9SelectedRun === run.id ? 'border-2 border-violet-400 bg-violet-50/50 shadow-sm' : v9SelectedRun ? 'border border-transparent opacity-50 hover:opacity-80' : 'border border-transparent hover:bg-grey-50'}"
 							onclick={() => { v9SelectedRun = v9SelectedRun === run.id ? null : run.id; }}
 						>
-							<div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md
-								{run.outputType === 'emails' ? 'bg-violet-50' : run.outputType === 'phones' ? 'bg-blue-50' : run.outputType === 'reverse' ? 'bg-teal-50' : 'bg-amber-50'}">
-								<span class="material-icons-round text-sm
-									{run.outputType === 'emails' ? 'text-violet-600' : run.outputType === 'phones' ? 'text-blue-600' : run.outputType === 'reverse' ? 'text-teal-600' : 'text-amber-600'}">
-									{run.outputType === 'emails' ? 'email' : run.outputType === 'phones' ? 'phone' : run.outputType === 'reverse' ? 'swap_horiz' : 'auto_awesome'}
-								</span>
+							<div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg {v9SelectedRun === run.id ? 'bg-violet-100' : 'bg-grey-100 group-hover:bg-violet-50'} transition-colors">
+								<span class="material-icons-round text-base {v9SelectedRun === run.id ? 'text-violet-600' : 'text-grey-500 group-hover:text-violet-600'} transition-colors">{run.inputMethod === 'csv' ? 'description' : run.inputMethod === 'search' ? 'search' : run.inputMethod === 'crm' ? 'hub' : run.inputMethod === 'manual' ? 'edit' : 'bolt'}</span>
 							</div>
 							<div class="min-w-0 flex-1">
-								<p class="text-grey-800 text-xs font-medium truncate">
-									{run.outputType === 'emails' ? 'Find Emails' : run.outputType === 'phones' ? 'Find Phones' : run.outputType === 'reverse' ? 'Reverse' : 'CRM'}
-								</p>
+								<p class="text-grey-900 text-sm font-medium truncate group-hover:text-violet-700 transition-colors">{run.name}</p>
 								<p class="text-grey-400 text-[10px]">{run.found}/{run.contactsCount} found · {run.startedAt}</p>
 							</div>
 							{#if run.status === 'running'}
-								<span class="text-amber-600 text-[10px] font-semibold">{run.progress}%</span>
+								<div class="flex flex-col items-end gap-0.5 shrink-0">
+									<span class="material-icons-round text-violet-500 text-base animate-spin" style="animation-duration: 1.5s;">sync</span>
+									<div class="bg-grey-200 h-1.5 w-12 overflow-hidden rounded-full">
+										<div class="h-full rounded-full bg-gradient-to-r from-violet-400 to-violet-600 enrichment-bar" style:width="{run.progress}%"></div>
+									</div>
+									<span class="text-violet-600 text-[10px] font-bold">{run.progress}%</span>
+								</div>
 							{:else if run.status === 'completed'}
-								<span class="material-icons-round text-emerald-500 text-sm">check_circle</span>
+								<span class="material-icons-round text-emerald-500 text-sm shrink-0">check_circle</span>
 							{:else}
-								<span class="material-icons-round text-grey-300 text-sm">schedule</span>
+								<span class="material-icons-round text-grey-300 text-sm shrink-0">schedule</span>
 							{/if}
 						</button>
 					{/each}
@@ -1101,3 +1131,15 @@
 	</div>
 </div>
 {/if}
+
+<style>
+	@keyframes shimmer {
+		0% { background-position: -200% 0; }
+		100% { background-position: 200% 0; }
+	}
+	:global(.enrichment-bar) {
+		background-size: 200% 100%;
+		background-image: linear-gradient(90deg, #8b5cf6 0%, #c4b5fd 50%, #8b5cf6 100%);
+		animation: shimmer 2s ease-in-out infinite;
+	}
+</style>

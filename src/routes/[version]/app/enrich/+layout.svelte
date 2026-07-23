@@ -45,6 +45,15 @@
 			</div>
 		</main>
 	</section>
+{:else if version === 'v9'}
+	<section class="page m-2 flex rounded-3xl">
+		<main
+			class="flex w-full overflow-hidden rounded-2xl border border-grey-200 bg-white"
+			style="height: calc(100vh - 72px - 16px);"
+		>
+			{@render children()}
+		</main>
+	</section>
 {:else}
 	{@render children()}
 {/if}

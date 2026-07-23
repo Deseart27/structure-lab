@@ -16,6 +16,7 @@ export interface Contact {
 	personalEmail: string;
 	linkedinUrl: string;
 	location: string;
+	hubspotSynced?: boolean;
 }
 
 export interface Job {
@@ -68,10 +69,12 @@ export interface Push {
 
 export interface EnrichmentRun {
 	id: string;
-	listId: string;
-	listName: string;
+	listId?: string;
+	listName?: string;
+	name: string;
 	outputType: 'emails' | 'phones' | 'reverse' | 'all';
 	inputMethod: 'csv' | 'manual' | 'crm' | 'list' | 'search';
+	contactIds: string[];
 	contactsCount: number;
 	found: number;
 	status: 'running' | 'completed' | 'queued';
@@ -82,15 +85,15 @@ export interface EnrichmentRun {
 // --- Contacts pool ---
 
 const contactsPool: Contact[] = [
-	{ id: 'c1', firstName: 'Jean', lastName: 'Morel', company: 'Alan', title: 'Head of Sales', email: 'jean.morel@alan.com', emailStatus: 'valid', phone: '+33 6 12 34 56 78', personalEmail: '', linkedinUrl: 'linkedin.com/in/jeanmorel', location: 'Paris, France' },
-	{ id: 'c2', firstName: 'Clara', lastName: 'Fontaine', company: 'Pennylane', title: 'VP Marketing', email: 'clara.f@pennylane.com', emailStatus: 'valid', phone: '+33 6 98 76 54 32', personalEmail: 'clara.fontaine@gmail.com', linkedinUrl: 'linkedin.com/in/clarafontaine', location: 'Paris, France' },
+	{ id: 'c1', firstName: 'Jean', lastName: 'Morel', company: 'Alan', title: 'Head of Sales', email: 'jean.morel@alan.com', emailStatus: 'valid', phone: '+33 6 12 34 56 78', personalEmail: '', linkedinUrl: 'linkedin.com/in/jeanmorel', location: 'Paris, France', hubspotSynced: true },
+	{ id: 'c2', firstName: 'Clara', lastName: 'Fontaine', company: 'Pennylane', title: 'VP Marketing', email: 'clara.f@pennylane.com', emailStatus: 'valid', phone: '+33 6 98 76 54 32', personalEmail: 'clara.fontaine@gmail.com', linkedinUrl: 'linkedin.com/in/clarafontaine', location: 'Paris, France', hubspotSynced: true },
 	{ id: 'c3', firstName: 'Marc', lastName: 'Dupont', company: 'Qonto', title: 'CRO', email: 'marc.dupont@qonto.com', emailStatus: 'catch-all', phone: '+33 7 11 22 33 44', personalEmail: '', linkedinUrl: 'linkedin.com/in/marcdupont', location: 'Paris, France' },
 	{ id: 'c4', firstName: 'Sophie', lastName: 'Laurent', company: 'Spendesk', title: 'Sales Director', email: 'sophie.l@spendesk.com', emailStatus: 'valid', phone: '+33 6 55 44 33 22', personalEmail: '', linkedinUrl: 'linkedin.com/in/sophielaurent', location: 'Paris, France' },
-	{ id: 'c5', firstName: 'Thomas', lastName: 'Bernard', company: 'PayFit', title: 'VP Sales', email: 'thomas.b@payfit.com', emailStatus: 'valid', phone: '+33 7 66 55 44 33', personalEmail: 'tbernard@outlook.fr', linkedinUrl: 'linkedin.com/in/thomasbernard', location: 'Paris, France' },
+	{ id: 'c5', firstName: 'Thomas', lastName: 'Bernard', company: 'PayFit', title: 'VP Sales', email: 'thomas.b@payfit.com', emailStatus: 'valid', phone: '+33 7 66 55 44 33', personalEmail: 'tbernard@outlook.fr', linkedinUrl: 'linkedin.com/in/thomasbernard', location: 'Paris, France', hubspotSynced: true },
 	{ id: 'c6', firstName: 'Lukas', lastName: 'Weber', company: 'Personio', title: 'Head of Sales DACH', email: 'lukas.weber@personio.de', emailStatus: 'valid', phone: '+49 170 123 4567', personalEmail: '', linkedinUrl: 'linkedin.com/in/lukasweber', location: 'Munich, Germany' },
-	{ id: 'c7', firstName: 'Anna', lastName: 'Schmidt', company: 'Celonis', title: 'VP Sales', email: 'anna.schmidt@celonis.com', emailStatus: 'valid', phone: '+49 171 234 5678', personalEmail: '', linkedinUrl: 'linkedin.com/in/annaschmidt', location: 'Munich, Germany' },
+	{ id: 'c7', firstName: 'Anna', lastName: 'Schmidt', company: 'Celonis', title: 'VP Sales', email: 'anna.schmidt@celonis.com', emailStatus: 'valid', phone: '+49 171 234 5678', personalEmail: '', linkedinUrl: 'linkedin.com/in/annaschmidt', location: 'Munich, Germany', hubspotSynced: true },
 	{ id: 'c8', firstName: 'Felix', lastName: 'Braun', company: 'Forto', title: 'CRO', email: 'felix.braun@forto.com', emailStatus: 'invalid-found', phone: '', personalEmail: '', linkedinUrl: 'linkedin.com/in/felixbraun', location: 'Berlin, Germany' },
-	{ id: 'c9', firstName: 'Marie', lastName: 'Lefebvre', company: 'Doctolib', title: 'Sales Manager', email: 'marie.l@doctolib.com', emailStatus: 'valid', phone: '+33 6 77 88 99 00', personalEmail: '', linkedinUrl: 'linkedin.com/in/marielefebvre', location: 'Paris, France' },
+	{ id: 'c9', firstName: 'Marie', lastName: 'Lefebvre', company: 'Doctolib', title: 'Sales Manager', email: 'marie.l@doctolib.com', emailStatus: 'valid', phone: '+33 6 77 88 99 00', personalEmail: '', linkedinUrl: 'linkedin.com/in/marielefebvre', location: 'Paris, France', hubspotSynced: true },
 	{ id: 'c10', firstName: 'Hugo', lastName: 'Martin', company: 'Swile', title: 'Account Executive', email: 'hugo.m@swile.co', emailStatus: 'valid', phone: '+33 7 22 33 44 55', personalEmail: '', linkedinUrl: 'linkedin.com/in/hugomartin', location: 'Montpellier, France' },
 	{ id: 'c11', firstName: 'Elena', lastName: 'Rossi', company: 'Scalapay', title: 'VP Sales', email: '', emailStatus: 'not-found', phone: '', personalEmail: '', linkedinUrl: 'linkedin.com/in/elenarossi', location: 'Milan, Italy' },
 	{ id: 'c12', firstName: 'Pablo', lastName: 'Garcia', company: 'Factorial', title: 'Head of Revenue', email: 'pablo.g@factorial.co', emailStatus: 'valid', phone: '+34 612 345 678', personalEmail: '', linkedinUrl: 'linkedin.com/in/pablogarcia', location: 'Barcelona, Spain' },
@@ -143,10 +146,7 @@ let jobs = $state<Job[]>([
 let lists = $state<V6List[]>([
 	{ id: 'l1', type: 'people', name: 'Q3 Targets', memberIds: ['c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c9'], sources: ['search', 'csv'], owner: 'Francis', updatedAt: '1 hour ago', enrichedPercent: 86, enrichmentStatus: 'idle' },
 	{ id: 'l2', type: 'company', name: 'ABM - Fintech FR', memberIds: ['comp1', 'comp3', 'comp5', 'comp8'], sources: ['search'], owner: 'Francis', updatedAt: '2 days ago', enrichedPercent: 0, enrichmentStatus: 'idle' },
-	{ id: 'l3', type: 'people', name: 'Webinar attendees', memberIds: ['c16', 'c17', 'c18'], sources: ['reverse'], owner: 'Marie', updatedAt: '1 day ago', enrichedPercent: 100, enrichmentStatus: 'idle', autoCreated: true, autoCreatedFrom: { type: 'enrichment', name: 'Reverse — webinar signups' } },
 	{ id: 'l4', type: 'people', name: 'Sales Leaders DACH', memberIds: ['c6', 'c7', 'c8', 'c15'], sources: ['search', 'manual'], owner: 'Francis', updatedAt: '5 days ago', enrichedPercent: 75, enrichmentStatus: 'enriching' },
-	{ id: 'l5', type: 'people', name: 'VP Sales · SaaS · France — Jul 14', memberIds: ['c1', 'c3', 'c4'], sources: ['search'], owner: 'Francis', updatedAt: '3 days ago', enrichedPercent: 100, enrichmentStatus: 'idle', autoCreated: true, autoCreatedFrom: { type: 'search', name: 'VP Sales · SaaS · France' } },
-	{ id: 'l6', type: 'people', name: 'leads_q3.csv', memberIds: ['c1', 'c2', 'c3', 'c4', 'c5', 'c9', 'c10', 'c11', 'c12', 'c13', 'c14', 'c15'], sources: ['csv'], owner: 'Francis', updatedAt: '2 hours ago', enrichedPercent: 86, enrichmentStatus: 'idle', autoCreated: true, autoCreatedFrom: { type: 'csv', name: 'leads_q3.csv' } },
 ]);
 
 // --- Companies ---
@@ -167,13 +167,13 @@ let companies = $state<Company[]>([
 // --- Enrichment Runs ---
 
 let runs = $state<EnrichmentRun[]>([
-	{ id: 'r1', listId: 'l1', listName: 'Q3 Targets', outputType: 'emails', inputMethod: 'csv', contactsCount: 234, found: 198, status: 'completed', progress: 100, startedAt: '2 hours ago' },
-	{ id: 'r2', listId: 'l4', listName: 'Sales Leaders DACH', outputType: 'phones', inputMethod: 'search', contactsCount: 45, found: 21, status: 'running', progress: 64, startedAt: '12 min ago' },
-	{ id: 'r3', listId: 'l1', listName: 'Q3 Targets', outputType: 'all', inputMethod: 'csv', contactsCount: 156, found: 72, status: 'completed', progress: 100, startedAt: '1 day ago' },
-	{ id: 'r4', listId: 'l3', listName: 'Webinar attendees', outputType: 'reverse', inputMethod: 'csv', contactsCount: 67, found: 52, status: 'completed', progress: 100, startedAt: '2 days ago' },
-	{ id: 'r5', listId: 'l4', listName: 'Sales Leaders DACH', outputType: 'emails', inputMethod: 'manual', contactsCount: 12, found: 0, status: 'queued', progress: 0, startedAt: '5 min ago' },
-	{ id: 'r6', listId: 'l5', listName: 'VP Sales · SaaS · France — Jul 14', outputType: 'emails', inputMethod: 'search', contactsCount: 3, found: 3, status: 'completed', progress: 100, startedAt: '3 days ago' },
-	{ id: 'r7', listId: 'l6', listName: 'leads_q3.csv', outputType: 'all', inputMethod: 'csv', contactsCount: 12, found: 10, status: 'completed', progress: 100, startedAt: '2 hours ago' },
+	{ id: 'r1', listId: 'l1', listName: 'Q3 Targets', name: 'Q3 Targets — email enrichment', outputType: 'emails', inputMethod: 'csv', contactIds: ['c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c9'], contactsCount: 234, found: 198, status: 'completed', progress: 100, startedAt: '2 hours ago' },
+	{ id: 'r2', listId: 'l4', listName: 'Sales Leaders DACH', name: 'Sales Leaders DACH — phones', outputType: 'phones', inputMethod: 'search', contactIds: ['c6', 'c7', 'c8', 'c15'], contactsCount: 45, found: 21, status: 'running', progress: 64, startedAt: '12 min ago' },
+	{ id: 'r3', listId: 'l1', listName: 'Q3 Targets', name: 'Q3 Targets — full enrichment', outputType: 'all', inputMethod: 'csv', contactIds: ['c1', 'c2', 'c3', 'c4', 'c5', 'c9'], contactsCount: 156, found: 72, status: 'completed', progress: 100, startedAt: '1 day ago' },
+	{ id: 'r4', name: 'Reverse — webinar signups', outputType: 'reverse', inputMethod: 'csv', contactIds: ['c16', 'c17', 'c18'], contactsCount: 67, found: 52, status: 'completed', progress: 100, startedAt: '2 days ago' },
+	{ id: 'r5', listId: 'l4', listName: 'Sales Leaders DACH', name: 'Sales Leaders DACH — emails', outputType: 'emails', inputMethod: 'manual', contactIds: ['c6', 'c7', 'c8', 'c15'], contactsCount: 12, found: 0, status: 'queued', progress: 0, startedAt: '5 min ago' },
+	{ id: 'r6', name: 'VP Sales · SaaS · France', outputType: 'emails', inputMethod: 'search', contactIds: ['c1', 'c3', 'c4'], contactsCount: 3, found: 3, status: 'completed', progress: 100, startedAt: '3 hours ago' },
+	{ id: 'r7', name: 'leads_q3.csv', outputType: 'all', inputMethod: 'csv', contactIds: ['c1', 'c2', 'c3', 'c4', 'c5', 'c9', 'c10', 'c11', 'c12', 'c13', 'c14', 'c15'], contactsCount: 12, found: 10, status: 'completed', progress: 100, startedAt: '2 hours ago' },
 ]);
 
 // --- Pushes ---
@@ -231,6 +231,10 @@ export const v6Store = {
 	},
 	getLatestRunForList(listId: string): EnrichmentRun | undefined {
 		return runs.find(r => r.listId === listId);
+	},
+	getRun(id: string): EnrichmentRun | undefined { return runs.find(r => r.id === id); },
+	getContactsForRun(run: EnrichmentRun): Contact[] {
+		return run.contactIds.map(id => contactsPool.find(c => c.id === id)).filter(Boolean) as Contact[];
 	},
 
 	unlockFunding(companyId: string) {

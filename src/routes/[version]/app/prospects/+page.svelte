@@ -64,20 +64,30 @@
 	}
 
 	// V9 state
-	let v9View = $state<'people-lists' | 'all-contacts' | 'company-lists' | 'all-companies'>('all-contacts');
-	let v9OwnerFilter = $state<'mine' | 'all'>('mine');
-	let v9PeopleLists = $derived(
-		(v9OwnerFilter === 'mine'
-			? v6Store.lists.filter(l => l.owner === 'Francis')
-			: v6Store.lists
-		).filter(l => l.type === 'people')
+	let enrichmentFilter = $derived($page.url.searchParams.get('enrichment'));
+	let activeRun = $derived(enrichmentFilter ? v6Store.getRun(enrichmentFilter) : null);
+	let v9FilteredContacts = $derived(
+		(activeRun ? v6Store.getContactsForRun(activeRun) : [...v6Store.contacts])
+			.sort((a, b) => {
+				// Sort enriched contacts first (those with email)
+				const aEnriched = a.email ? 1 : 0;
+				const bEnriched = b.email ? 1 : 0;
+				return bEnriched - aEnriched;
+			})
 	);
-	let v9CompanyLists = $derived(
-		(v9OwnerFilter === 'mine'
-			? v6Store.lists.filter(l => l.owner === 'Francis')
-			: v6Store.lists
-		).filter(l => l.type === 'company')
-	);
+	let v9Selected = $state(new Set<string>());
+	function v9ToggleContact(id: string) {
+		const next = new Set(v9Selected);
+		if (next.has(id)) next.delete(id); else next.add(id);
+		v9Selected = next;
+	}
+	function v9ToggleAll() {
+		if (v9Selected.size === v9FilteredContacts.length) {
+			v9Selected = new Set();
+		} else {
+			v9Selected = new Set(v9FilteredContacts.map(c => c.id));
+		}
+	}
 
 	import type { EmailStatus } from '$lib/mock/v6.svelte';
 	const emailStatusStyles: Record<EmailStatus, { label: string; color: string }> = {
@@ -668,43 +678,108 @@
 </div>
 
 {:else if version === 'v9'}
-<!-- V9: All Contacts default view (sidebar is in layout) -->
+<!-- V9: All Contacts view — contact is the core object -->
 <div class="flex h-full flex-col">
-		<!-- All Contacts view -->
-		<div class="border-grey-200 flex h-14 shrink-0 items-center justify-between border-b px-6">
-			<div class="flex items-center gap-3">
-				<h1 class="text-grey-900 text-base font-semibold">All Contacts</h1>
-				<span class="text-grey-500 text-sm">{v6Store.contacts.length} contacts</span>
-			</div>
-			<div class="flex items-center gap-2">
-				<button class="btn-ghost h-8 gap-1.5 px-3 text-sm" onclick={() => toast.show('Import CSV — coming soon')}>
-					<span class="material-icons-round text-grey-600 text-base">upload_file</span>
-					Import
-				</button>
-				<button class="btn-primary h-8 gap-1.5 px-3 text-sm" onclick={() => { v6NewListOpen = true; }}>
-					<span class="material-icons-round text-sm text-white">add</span>
-					New list
-				</button>
-			</div>
+	<!-- Header -->
+	<div class="border-grey-200 flex h-14 shrink-0 items-center justify-between border-b px-6">
+		<div class="flex items-center gap-3">
+			<h1 class="text-grey-900 text-base font-semibold">All Contacts</h1>
+			<span class="text-grey-500 text-sm">{v9FilteredContacts.length}{activeRun ? ` of ${v6Store.contacts.length}` : ''} contacts</span>
 		</div>
+		<div class="flex items-center gap-2">
+			<button class="btn-ghost h-8 gap-1.5 px-3 text-sm" onclick={() => toast.show('Add contact — coming soon')}>
+				<span class="material-icons-round text-grey-600 text-base">person_add</span>
+				Add contact
+			</button>
+			<button class="btn-ghost h-8 gap-1.5 px-3 text-sm" onclick={() => toast.show('Import CSV — coming soon')}>
+				<span class="material-icons-round text-grey-600 text-base">upload_file</span>
+				Import
+			</button>
+			<div class="relative">
+				<button class="btn-ghost h-8 gap-1.5 px-3 text-sm" onclick={() => { v6ExportBool = !v6ExportBool; }}>
+					<span class="material-icons-round text-grey-600 text-base">download</span>
+					Export
+					<span class="material-icons-round text-grey-400 text-sm">expand_more</span>
+				</button>
+				<ExportPopover
+					bind:open={v6ExportBool}
+					context="people"
+					count={v9Selected.size > 0 ? v9Selected.size : v9FilteredContacts.length}
+					sourceName="All Contacts"
+				/>
+			</div>
+			<button
+				class="btn-primary h-8 gap-1.5 px-3 text-sm"
+				onclick={() => toast.show(`Enriching ${v9Selected.size > 0 ? v9Selected.size : v9FilteredContacts.length} contacts…`)}
+			>
+				<span class="material-icons-round text-sm text-white">auto_awesome</span>
+				Enrich
+			</button>
+		</div>
+	</div>
+
+	<!-- Enrichment filter banner -->
+	{#if activeRun}
+		<div class="border-grey-200 flex items-center gap-3 border-b bg-violet-50/50 px-6 py-2">
+			<span class="material-icons-round text-sm text-violet-500">filter_alt</span>
+			<span class="text-sm text-violet-700">
+				Filtered by enrichment: <span class="font-medium">{activeRun.name}</span>
+				<span class="text-violet-400">· {activeRun.contactsCount} contacts · {activeRun.startedAt}</span>
+			</span>
+			<a
+				href="{base}/app/prospects"
+				class="ml-auto inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium text-violet-600 hover:bg-violet-100 transition-colors"
+			>
+				<span class="material-icons-round text-xs">close</span>
+				Clear
+			</a>
+			<button
+				class="inline-flex items-center gap-1 rounded-md border border-violet-300 bg-white px-2.5 py-1 text-xs font-medium text-violet-700 hover:bg-violet-50 transition-colors"
+				onclick={() => { toast.show(`Saved as list "${activeRun?.name}"`); }}
+			>
+				<span class="material-icons-round text-xs">bookmark_add</span>
+				Save as list
+			</button>
+		</div>
+	{/if}
+
+	<!-- Body: table + right enrichment panel -->
+	<div class="flex flex-1 overflow-hidden">
+		<!-- Contact table -->
 		<div class="flex-1 overflow-auto">
-			<table class="w-full min-w-[1000px]">
+			<table class="w-full min-w-[900px]">
 				<thead class="sticky top-0 z-10">
 					<tr class="table-header">
-						<th class="text-grey-600 px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider">Name</th>
+						<th class="w-10 px-3 py-3">
+							<input
+								type="checkbox"
+								checked={v9Selected.size === v9FilteredContacts.length && v9FilteredContacts.length > 0}
+								onchange={v9ToggleAll}
+								class="accent-violet-700"
+							/>
+						</th>
+						<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Name</th>
 						<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Company</th>
 						<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Title</th>
 						<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Email</th>
 						<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Phone</th>
-						<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Email status</th>
+						<th class="w-8 px-1 py-3"></th>
 						<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">In lists</th>
 					</tr>
 				</thead>
 				<tbody class="bg-white">
-					{#each v6Store.contacts as contact}
+					{#each v9FilteredContacts as contact}
 						{@const contactLists = v6Store.getListsForContact(contact.id)}
-						<tr class="border-grey-100 hover:bg-grey-50 border-b transition-colors">
-							<td class="px-5 py-3">
+						<tr class="border-grey-100 hover:bg-grey-50 border-b transition-colors {v9Selected.has(contact.id) ? 'bg-violet-50/40' : ''}">
+							<td class="w-10 px-3 py-3">
+								<input
+									type="checkbox"
+									checked={v9Selected.has(contact.id)}
+									onchange={() => v9ToggleContact(contact.id)}
+									class="accent-violet-700"
+								/>
+							</td>
+							<td class="px-4 py-3">
 								<div>
 									<p class="text-grey-900 text-sm font-medium">{contact.firstName} {contact.lastName}</p>
 									<p class="text-grey-400 text-xs">{contact.location}</p>
@@ -714,26 +789,44 @@
 							<td class="text-grey-600 px-4 py-3 text-sm">{contact.title}</td>
 							<td class="px-4 py-3">
 								{#if contact.email}
-									<span class="text-grey-900 font-mono text-xs">{contact.email}</span>
+									<div class="flex items-center gap-1.5">
+										<span class="material-icons-round text-sm text-pink-400">email</span>
+										<span class="text-grey-900 font-mono text-xs font-semibold">{contact.email}</span>
+										{#if contact.emailStatus === 'valid'}
+											<span class="material-icons-round text-sm text-emerald-500">check_circle</span>
+										{/if}
+									</div>
 								{:else}
 									<span class="text-grey-300 text-xs">—</span>
 								{/if}
 							</td>
 							<td class="px-4 py-3">
 								{#if contact.phone}
-									<span class="text-grey-900 font-mono text-xs">{contact.phone}</span>
+									<div class="flex items-center gap-1.5">
+										<span class="material-icons-round text-sm text-violet-400">phone</span>
+										<span class="text-grey-900 font-mono text-xs">{contact.phone}</span>
+									</div>
 								{:else}
-									<span class="text-grey-300 text-xs">—</span>
+									<button
+										class="flex h-7 items-center gap-1 rounded-lg border border-grey-200 px-2 text-xs font-medium text-grey-500 transition-colors hover:border-violet-300 hover:text-violet-600"
+										onclick={() => toast.show(`Finding phone for ${contact.firstName}…`)}
+									>
+										<span class="material-icons-round text-xs">phone</span>
+										Find phone
+									</button>
 								{/if}
 							</td>
-							<td class="px-4 py-3">
-								{#if emailStatusStyles[contact.emailStatus]}
-									<span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium {emailStatusStyles[contact.emailStatus].color}">
-										{emailStatusStyles[contact.emailStatus].label}
-									</span>
-								{:else}
-									<span class="text-grey-300 text-xs">—</span>
-								{/if}
+							<td class="px-1 py-3">
+								<button
+									class="flex h-7 w-7 items-center justify-center rounded-lg transition-colors {contact.hubspotSynced ? 'opacity-100' : 'opacity-40 hover:opacity-70'}"
+									title={contact.hubspotSynced ? 'Already in HubSpot' : 'Push to HubSpot'}
+									onclick={() => toast.show(contact.hubspotSynced ? `${contact.firstName} ${contact.lastName} is already in HubSpot` : `Pushing ${contact.firstName} ${contact.lastName} to HubSpot…`)}
+								>
+									<svg class="h-3.5 w-3.5" viewBox="0 0 1024 1024">
+										<circle cx="512" cy="512" r="512" fill={contact.hubspotSynced ? '#FF7A59' : '#9CA3AF'}/>
+										<path d="M623.8 624.94c-38.23 0-69.24-30.67-69.24-68.51s31-68.52 69.24-68.52 69.26 30.67 69.26 68.52-31 68.51-69.26 68.51m20.74-200.42v-61a46.83 46.83 0 0 0 27.33-42.29v-1.41c0-25.78-21.32-46.86-47.35-46.86h-1.43c-26 0-47.35 21.09-47.35 46.86v1.41a46.85 46.85 0 0 0 27.33 42.29v61a135.08 135.08 0 0 0-63.86 27.79l-169.1-130.17A52.49 52.49 0 0 0 372 309c0-29.21-23.89-52.92-53.4-53s-53.45 23.59-53.48 52.81 23.85 52.88 53.36 52.93a53.29 53.29 0 0 0 26.33-7.09l166.38 128.1a132.14 132.14 0 0 0 2.07 150.3l-50.62 50.1A43.42 43.42 0 1 0 450.1 768c24.24 0 43.9-19.46 43.9-43.45a42.24 42.24 0 0 0-2-12.42l50-49.52a135.28 135.28 0 0 0 81.8 27.47c74.61 0 135.06-59.83 135.06-133.65 0-66.82-49.62-122-114.33-131.91" fill="#fff" fill-rule="evenodd"/>
+									</svg>
+								</button>
 							</td>
 							<td class="px-4 py-3">
 								{#if contactLists.length > 0}
@@ -752,7 +845,7 @@
 										{/if}
 									</div>
 								{:else}
-									<span class="text-grey-300 text-xs">No list</span>
+									<span class="text-grey-300 text-xs">—</span>
 								{/if}
 							</td>
 						</tr>
@@ -761,7 +854,50 @@
 			</table>
 		</div>
 
+		<!-- Right panel: Enrichment jobs -->
+		<div class="border-grey-200 w-72 shrink-0 border-l bg-white overflow-y-auto">
+			<div class="flex items-center justify-between px-5 pt-5 pb-3">
+				<p class="text-grey-700 text-xs font-semibold uppercase tracking-wider">Enrichments</p>
+				{#if activeRun}
+					<a href="{base}/app/prospects" class="text-violet-600 hover:text-violet-700 text-xs font-medium">Show all</a>
+				{/if}
+			</div>
+			<div class="flex flex-col gap-0.5 px-3 pb-4">
+				{#each v6Store.runs as run}
+					<a
+						href="{base}/app/prospects?enrichment={run.id}"
+						class="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-left transition-all group
+							{activeRun?.id === run.id ? 'border-2 border-violet-400 bg-violet-50/50 shadow-sm' : activeRun ? 'border border-transparent opacity-50 hover:opacity-80' : 'border border-transparent hover:bg-grey-50'}"
+					>
+						<div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg {activeRun?.id === run.id ? 'bg-violet-100' : 'bg-grey-100 group-hover:bg-violet-50'} transition-colors">
+							<span class="material-icons-round text-base {activeRun?.id === run.id ? 'text-violet-600' : 'text-grey-500 group-hover:text-violet-600'} transition-colors">{run.inputMethod === 'csv' ? 'description' : run.inputMethod === 'search' ? 'search' : run.inputMethod === 'crm' ? 'hub' : run.inputMethod === 'manual' ? 'edit' : 'bolt'}</span>
+						</div>
+						<div class="min-w-0 flex-1">
+							<p class="text-grey-900 text-sm font-medium truncate group-hover:text-violet-700 transition-colors">{run.name}</p>
+							<p class="text-grey-400 text-[10px]">{run.found}/{run.contactsCount} found · {run.startedAt}</p>
+						</div>
+						{#if run.status === 'running'}
+							<div class="flex flex-col items-end gap-0.5 shrink-0">
+								<span class="material-icons-round text-violet-500 text-base animate-spin" style="animation-duration: 1.5s;">sync</span>
+								<div class="bg-grey-200 h-1.5 w-12 overflow-hidden rounded-full">
+									<div class="h-full rounded-full bg-gradient-to-r from-violet-400 to-violet-600 enrichment-bar" style:width="{run.progress}%"></div>
+								</div>
+								<span class="text-violet-600 text-[10px] font-bold">{run.progress}%</span>
+							</div>
+						{:else if run.status === 'completed'}
+							<span class="material-icons-round text-emerald-500 text-sm shrink-0">check_circle</span>
+						{:else}
+							<span class="material-icons-round text-grey-300 text-sm shrink-0">schedule</span>
+						{/if}
+					</a>
+				{/each}
+				{#if v6Store.runs.length === 0}
+					<p class="text-grey-400 text-xs py-4 px-2">No enrichments yet</p>
+				{/if}
+			</div>
+		</div>
 	</div>
+</div>
 
 <!-- New list modal (V9) -->
 {#if v6NewListOpen}
@@ -1075,3 +1211,16 @@
 	</div>
 </div>
 {/if}
+
+
+<style>
+	@keyframes shimmer {
+		0% { background-position: -200% 0; }
+		100% { background-position: 200% 0; }
+	}
+	:global(.enrichment-bar) {
+		background-size: 200% 100%;
+		background-image: linear-gradient(90deg, #8b5cf6 0%, #c4b5fd 50%, #8b5cf6 100%);
+		animation: shimmer 2s ease-in-out infinite;
+	}
+</style>

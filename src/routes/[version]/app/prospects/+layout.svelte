@@ -25,7 +25,7 @@
 
 	// Determine what's active in the sidebar
 	let isOnListDetail = $derived(!!listId);
-	let isAllContacts = $derived(route.endsWith('/prospects') || route.endsWith('/prospects/'));
+	let isAllContacts = $derived((route.endsWith('/prospects') || route.endsWith('/prospects/')) && !$page.url.searchParams.get('enrichment'));
 	let isAllCompanies = $derived(route.includes('/prospects/companies'));
 </script>
 
@@ -38,7 +38,7 @@
 			<!-- Left sidebar -->
 			<div class="border-grey-200 flex w-56 shrink-0 flex-col border-r bg-white overflow-y-auto rounded-l-2xl">
 				<!-- Owner filter -->
-				<div class="px-3 pt-4 pb-2">
+				<div class="px-3 pt-4 pb-3">
 					<div class="flex items-center rounded-lg border border-grey-200 p-0.5">
 						<button
 							class="flex-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors {v9OwnerFilter === 'mine' ? 'bg-grey-100 text-grey-900' : 'text-grey-500 hover:text-grey-700'}"
@@ -47,13 +47,13 @@
 						<button
 							class="flex-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors {v9OwnerFilter === 'all' ? 'bg-grey-100 text-grey-900' : 'text-grey-500 hover:text-grey-700'}"
 							onclick={() => { v9OwnerFilter = 'all'; }}
-						>All</button>
+						>All lists</button>
 					</div>
 				</div>
 
 				<!-- Contacts section -->
-				<div class="px-3 pt-3 pb-1">
-					<p class="text-grey-400 mb-1 px-2 text-[10px] font-semibold uppercase tracking-wider">Contacts</p>
+				<div class="px-4 pt-3 pb-1.5">
+					<p class="text-grey-800 text-xs font-bold uppercase tracking-wider">Contacts</p>
 				</div>
 				<nav class="flex flex-col gap-0.5 px-3">
 					<a
@@ -67,18 +67,18 @@
 					{#each v9PeopleLists as list}
 						<a
 							href="{base}/app/prospects/{list.id}"
-							class="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm transition-colors {listId === list.id ? 'bg-violet-50 text-violet-700 font-medium' : 'text-grey-600 hover:bg-grey-50 hover:text-grey-900'}"
+							class="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm transition-colors {listId === list.id ? 'bg-violet-50 text-violet-700 font-medium' : 'text-grey-600 hover:bg-grey-50 hover:text-grey-900'}"
 						>
-							<span class="material-icons-round text-base {listId === list.id ? 'text-violet-500' : 'text-grey-300'}">folder</span>
+							<span class="material-icons-round text-base shrink-0 {listId === list.id ? 'text-violet-500' : 'text-grey-300'}">folder</span>
 							<span class="truncate flex-1">{list.name}</span>
-							<span class="text-grey-400 text-xs">{list.memberIds.length}</span>
+							<span class="text-grey-400 shrink-0 text-xs">{list.memberIds.length}</span>
 						</a>
 					{/each}
 				</nav>
 
 				<!-- Companies section -->
-				<div class="px-3 pt-4 pb-1">
-					<p class="text-grey-400 mb-1 px-2 text-[10px] font-semibold uppercase tracking-wider">Companies</p>
+				<div class="px-4 pt-5 pb-1.5">
+					<p class="text-grey-800 text-xs font-bold uppercase tracking-wider">Companies</p>
 				</div>
 				<nav class="flex flex-col gap-0.5 px-3 pb-4">
 					<a
@@ -92,11 +92,11 @@
 					{#each v9CompanyLists as list}
 						<a
 							href="{base}/app/prospects/{list.id}"
-							class="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm transition-colors {listId === list.id ? 'bg-violet-50 text-violet-700 font-medium' : 'text-grey-600 hover:bg-grey-50 hover:text-grey-900'}"
+							class="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm transition-colors {listId === list.id ? 'bg-violet-50 text-violet-700 font-medium' : 'text-grey-600 hover:bg-grey-50 hover:text-grey-900'}"
 						>
-							<span class="material-icons-round text-base {listId === list.id ? 'text-violet-500' : 'text-grey-300'}">folder</span>
+							<span class="material-icons-round text-base shrink-0 {listId === list.id ? 'text-violet-500' : 'text-grey-300'}">folder</span>
 							<span class="truncate flex-1">{list.name}</span>
-							<span class="text-grey-400 text-xs">{list.memberIds.length}</span>
+							<span class="text-grey-400 shrink-0 text-xs">{list.memberIds.length}</span>
 						</a>
 					{/each}
 				</nav>

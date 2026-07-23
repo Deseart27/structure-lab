@@ -106,8 +106,8 @@
 		if (item.match === '/integrations' && !item.match.includes('/engagement') && !item.match.includes('/api')) {
 			return route.includes('/integrations') && !route.includes('/integrations/engagement') && !route.includes('/integrations/api');
 		}
-		// V9: "Lists" tab — match /prospects exactly + /prospects/[id] detail pages, but NOT /prospects/contacts or /prospects/companies
-		if (version === 'v9' && item.match === '/prospects' && item.label === 'Lists') {
+		// V9: "Contacts" tab — match /prospects exactly + /prospects/[id] detail pages, but NOT /prospects/contacts or /prospects/companies
+		if (version === 'v9' && item.match === '/prospects' && (item.label === 'Lists' || item.label === 'Contacts')) {
 			return (route.endsWith('/prospects') || route.endsWith('/prospects/') ||
 				(route.includes('/prospects/') && !route.includes('/prospects/contacts') && !route.includes('/prospects/companies') && !route.includes('/prospects/lists')));
 		}

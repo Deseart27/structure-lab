@@ -2,6 +2,7 @@
 	import { base as svelteBase } from '$app/paths';
 	import { page } from '$app/stores';
 	import { v6Store } from '$lib/mock/v6.svelte';
+	import { toast } from '$lib/toast.svelte';
 
 	let version = $derived($page.params.version);
 	let base = $derived(`${svelteBase}/${version}`);
@@ -15,6 +16,12 @@
 		<div class="flex items-center gap-3">
 			<h1 class="text-grey-900 text-base font-semibold">All Companies</h1>
 			<span class="text-grey-500 text-sm">{allCompanies.length} companies across all lists</span>
+		</div>
+		<div class="flex items-center gap-2">
+			<button class="btn-ghost h-8 gap-1.5 px-3 text-sm" onclick={() => toast.show('Add company — coming soon')}>
+				<span class="material-icons-round text-grey-600 text-base">domain_add</span>
+				Add company
+			</button>
 		</div>
 	</div>
 

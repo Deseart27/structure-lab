@@ -3,6 +3,7 @@
 	import { page } from '$app/stores';
 	import { v6Store } from '$lib/mock/v6.svelte';
 	import type { EmailStatus } from '$lib/mock/v6.svelte';
+	import { toast } from '$lib/toast.svelte';
 
 	let version = $derived($page.params.version);
 	let base = $derived(`${svelteBase}/${version}`);
@@ -24,6 +25,12 @@
 		<div class="flex items-center gap-3">
 			<h1 class="text-grey-900 text-base font-semibold">All Contacts</h1>
 			<span class="text-grey-500 text-sm">{allContacts.length} contacts across all lists</span>
+		</div>
+		<div class="flex items-center gap-2">
+			<button class="btn-ghost h-8 gap-1.5 px-3 text-sm" onclick={() => toast.show('Add contact — coming soon')}>
+				<span class="material-icons-round text-grey-600 text-base">person_add</span>
+				Add contact
+			</button>
 		</div>
 	</div>
 

@@ -6,10 +6,22 @@
 	let base = $derived(`${svelteBase}/${$page.params.version}`);
 	let version = $derived($page.params.version);
 
-	type NavItem = { label: string; href: string; match: string; badge?: string };
+	type NavItem = { label: string; href: string; match: string; matchExclude?: string; badge?: string };
+
+	function isNavActive(item: NavItem): boolean {
+		if (item.matchExclude && route.includes(item.matchExclude)) return false;
+		return route.includes(item.match);
+	}
 
 	let navItems = $derived<NavItem[]>(
-		version === 'v9'
+		version === 'v10'
+			? [
+					{ label: 'Search', href: `${base}/app/search`, match: '/search' },
+					{ label: 'Contacts', href: `${base}/app/prospects`, match: '/prospects', matchExclude: '/prospects/companies' },
+					{ label: 'Companies', href: `${base}/app/prospects/companies`, match: '/prospects/companies' },
+					{ label: 'Integrations', href: `${base}/app/integrations`, match: '/integrations' },
+				]
+			: version === 'v9'
 			? [
 					{ label: 'Search', href: `${base}/app/search`, match: '/search' },
 					{ label: 'Contacts', href: `${base}/app/prospects`, match: '/prospects' },
@@ -71,13 +83,13 @@
 <div class="flex min-w-0 flex-1 items-center gap-3 overflow-x-auto lg:gap-6" style="scrollbar-width:none">
 	{#each navItems as item}
 		<div class="relative shrink-0">
-			{#if route.includes(item.match)}
+			{#if isNavActive(item)}
 				<div class="absolute top-0 left-0 h-full w-full rounded-lg bg-violet-200"></div>
 			{/if}
 			<a
 				class="text-grey-600 relative z-[2] flex h-8 items-center gap-1.5 rounded-lg px-3 text-sm font-medium whitespace-nowrap"
-				class:text-violet-800={route.includes(item.match)}
-				class:font-semibold={route.includes(item.match)}
+				class:text-violet-800={isNavActive(item)}
+				class:font-semibold={isNavActive(item)}
 				href={item.href}
 			>
 				{item.label}
@@ -89,4 +101,14 @@
 			</a>
 		</div>
 	{/each}
+
+	{#if version === 'v10'}
+		<a
+			href="{base}/app/enrich"
+			class="ml-1 flex h-8 shrink-0 items-center gap-1.5 rounded-lg bg-violet-700 px-3.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-violet-800 hover:shadow-md"
+		>
+			<span class="material-icons-round text-base">add</span>
+			New Enrichment
+		</a>
+	{/if}
 </div>

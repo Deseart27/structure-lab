@@ -76,7 +76,7 @@
 	];
 
 	let sections = $derived<SectionConfig[]>(
-		version === 'v9'
+		version === 'v9' || version === 'v10'
 			? v9Sections
 			: version === 'v6' || version === 'v7' || version === 'v8'
 			? v6Sections
@@ -107,7 +107,7 @@
 			return route.includes('/integrations') && !route.includes('/integrations/engagement') && !route.includes('/integrations/api');
 		}
 		// V9: "Contacts" tab — match /prospects exactly + /prospects/[id] detail pages, but NOT /prospects/contacts or /prospects/companies
-		if (version === 'v9' && item.match === '/prospects' && (item.label === 'Lists' || item.label === 'Contacts')) {
+		if ((version === 'v9' || version === 'v10') && item.match === '/prospects' && (item.label === 'Lists' || item.label === 'Contacts')) {
 			return (route.endsWith('/prospects') || route.endsWith('/prospects/') ||
 				(route.includes('/prospects/') && !route.includes('/prospects/contacts') && !route.includes('/prospects/companies') && !route.includes('/prospects/lists')));
 		}

@@ -66,6 +66,16 @@
 	// V9 state
 	let enrichmentFilter = $derived($page.url.searchParams.get('enrichment'));
 	let activeRun = $derived(enrichmentFilter ? v6Store.getRun(enrichmentFilter) : null);
+
+	// V10: collapsible right panel — open by default when coming from enrichment
+	let v10PanelOpen = $state(false);
+	let v10PrevEnrichment = $state<string | null>(null);
+	$effect(() => {
+		if (enrichmentFilter && enrichmentFilter !== v10PrevEnrichment) {
+			v10PanelOpen = true;
+		}
+		v10PrevEnrichment = enrichmentFilter;
+	});
 	let v9FilteredContacts = $derived(
 		(activeRun ? v6Store.getContactsForRun(activeRun) : [...v6Store.contacts])
 			.sort((a, b) => {
@@ -677,7 +687,7 @@
 	</div>
 </div>
 
-{:else if version === 'v9'}
+{:else if version === 'v9' || version === 'v10'}
 <!-- V9: All Contacts view — contact is the core object -->
 <div class="flex h-full flex-col">
 	<!-- Header -->
@@ -855,47 +865,106 @@
 		</div>
 
 		<!-- Right panel: Enrichment jobs -->
-		<div class="border-grey-200 w-72 shrink-0 border-l bg-white overflow-y-auto">
-			<div class="flex items-center justify-between px-5 pt-5 pb-3">
-				<p class="text-grey-700 text-xs font-semibold uppercase tracking-wider">Enrichments</p>
-				{#if activeRun}
-					<a href="{base}/app/prospects" class="text-violet-600 hover:text-violet-700 text-xs font-medium">Show all</a>
-				{/if}
-			</div>
-			<div class="flex flex-col gap-0.5 px-3 pb-4">
-				{#each v6Store.runs as run}
-					<a
-						href="{base}/app/prospects?enrichment={run.id}"
-						class="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-left transition-all group
-							{activeRun?.id === run.id ? 'border-2 border-violet-400 bg-violet-50/50 shadow-sm' : activeRun ? 'border border-transparent opacity-50 hover:opacity-80' : 'border border-transparent hover:bg-grey-50'}"
-					>
-						<div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg {activeRun?.id === run.id ? 'bg-violet-100' : 'bg-grey-100 group-hover:bg-violet-50'} transition-colors">
-							<span class="material-icons-round text-base {activeRun?.id === run.id ? 'text-violet-600' : 'text-grey-500 group-hover:text-violet-600'} transition-colors">{run.inputMethod === 'csv' ? 'description' : run.inputMethod === 'search' ? 'search' : run.inputMethod === 'crm' ? 'hub' : run.inputMethod === 'manual' ? 'edit' : 'bolt'}</span>
-						</div>
-						<div class="min-w-0 flex-1">
-							<p class="text-grey-900 text-sm font-medium truncate group-hover:text-violet-700 transition-colors">{run.name}</p>
-							<p class="text-grey-400 text-[10px]">{run.found}/{run.contactsCount} found · {run.startedAt}</p>
-						</div>
-						{#if run.status === 'running'}
-							<div class="flex flex-col items-end gap-0.5 shrink-0">
-								<span class="material-icons-round text-violet-500 text-base animate-spin" style="animation-duration: 1.5s;">sync</span>
-								<div class="bg-grey-200 h-1.5 w-12 overflow-hidden rounded-full">
-									<div class="h-full rounded-full bg-gradient-to-r from-violet-400 to-violet-600 enrichment-bar" style:width="{run.progress}%"></div>
-								</div>
-								<span class="text-violet-600 text-[10px] font-bold">{run.progress}%</span>
-							</div>
-						{:else if run.status === 'completed'}
-							<span class="material-icons-round text-emerald-500 text-sm shrink-0">check_circle</span>
-						{:else}
-							<span class="material-icons-round text-grey-300 text-sm shrink-0">schedule</span>
+		{#if version === 'v10'}
+			<!-- V10: collapsible panel with toggle tab -->
+			<div class="relative flex shrink-0">
+				<!-- Toggle tab -->
+				<button
+					class="absolute -left-8 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-l-lg border border-r-0 border-grey-200 bg-white text-grey-400 shadow-sm transition-colors hover:bg-grey-50 hover:text-grey-600"
+					onclick={() => { v10PanelOpen = !v10PanelOpen; }}
+					title={v10PanelOpen ? 'Close enrichments panel' : 'Open enrichments panel'}
+				>
+					<span class="material-icons-round text-base">{v10PanelOpen ? 'chevron_right' : 'auto_awesome'}</span>
+				</button>
+
+				{#if v10PanelOpen}
+				<div class="border-grey-200 w-72 border-l bg-white overflow-y-auto">
+					<div class="flex items-center justify-between px-5 pt-5 pb-3">
+						<p class="text-grey-700 text-xs font-semibold uppercase tracking-wider">Enrichments</p>
+						{#if activeRun}
+							<a href="{base}/app/prospects" class="text-violet-600 hover:text-violet-700 text-xs font-medium">Clear filter</a>
 						{/if}
-					</a>
-				{/each}
-				{#if v6Store.runs.length === 0}
-					<p class="text-grey-400 text-xs py-4 px-2">No enrichments yet</p>
+					</div>
+					<div class="flex flex-col gap-0.5 px-3 pb-4">
+						{#each v6Store.runs as run}
+							<a
+								href="{base}/app/prospects?enrichment={run.id}"
+								class="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-left transition-all group
+									{activeRun?.id === run.id ? 'border-2 border-violet-400 bg-violet-50/50 shadow-sm' : activeRun ? 'border border-transparent opacity-50 hover:opacity-80' : 'border border-transparent hover:bg-grey-50'}"
+							>
+								<div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg {activeRun?.id === run.id ? 'bg-violet-100' : 'bg-grey-100 group-hover:bg-violet-50'} transition-colors">
+									<span class="material-icons-round text-base {activeRun?.id === run.id ? 'text-violet-600' : 'text-grey-500 group-hover:text-violet-600'} transition-colors">{run.inputMethod === 'csv' ? 'description' : run.inputMethod === 'search' ? 'search' : run.inputMethod === 'crm' ? 'hub' : run.inputMethod === 'manual' ? 'edit' : 'bolt'}</span>
+								</div>
+								<div class="min-w-0 flex-1">
+									<p class="text-grey-900 text-sm font-medium truncate group-hover:text-violet-700 transition-colors">{run.name}</p>
+									<p class="text-grey-400 text-[10px]">{run.found}/{run.contactsCount} found · {run.startedAt}</p>
+								</div>
+								{#if run.status === 'running'}
+									<div class="flex flex-col items-end gap-0.5 shrink-0">
+										<span class="material-icons-round text-violet-500 text-base animate-spin" style="animation-duration: 1.5s;">sync</span>
+										<div class="bg-grey-200 h-1.5 w-12 overflow-hidden rounded-full">
+											<div class="h-full rounded-full bg-gradient-to-r from-violet-400 to-violet-600 enrichment-bar" style:width="{run.progress}%"></div>
+										</div>
+										<span class="text-violet-600 text-[10px] font-bold">{run.progress}%</span>
+									</div>
+								{:else if run.status === 'completed'}
+									<span class="material-icons-round text-emerald-500 text-sm shrink-0">check_circle</span>
+								{:else}
+									<span class="material-icons-round text-grey-300 text-sm shrink-0">schedule</span>
+								{/if}
+							</a>
+						{/each}
+						{#if v6Store.runs.length === 0}
+							<p class="text-grey-400 text-xs py-4 px-2">No enrichments yet</p>
+						{/if}
+					</div>
+				</div>
 				{/if}
 			</div>
-		</div>
+		{:else}
+			<!-- V9: always visible -->
+			<div class="border-grey-200 w-72 shrink-0 border-l bg-white overflow-y-auto">
+				<div class="flex items-center justify-between px-5 pt-5 pb-3">
+					<p class="text-grey-700 text-xs font-semibold uppercase tracking-wider">Enrichments</p>
+					{#if activeRun}
+						<a href="{base}/app/prospects" class="text-violet-600 hover:text-violet-700 text-xs font-medium">Show all</a>
+					{/if}
+				</div>
+				<div class="flex flex-col gap-0.5 px-3 pb-4">
+					{#each v6Store.runs as run}
+						<a
+							href="{base}/app/prospects?enrichment={run.id}"
+							class="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-left transition-all group
+								{activeRun?.id === run.id ? 'border-2 border-violet-400 bg-violet-50/50 shadow-sm' : activeRun ? 'border border-transparent opacity-50 hover:opacity-80' : 'border border-transparent hover:bg-grey-50'}"
+						>
+							<div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg {activeRun?.id === run.id ? 'bg-violet-100' : 'bg-grey-100 group-hover:bg-violet-50'} transition-colors">
+								<span class="material-icons-round text-base {activeRun?.id === run.id ? 'text-violet-600' : 'text-grey-500 group-hover:text-violet-600'} transition-colors">{run.inputMethod === 'csv' ? 'description' : run.inputMethod === 'search' ? 'search' : run.inputMethod === 'crm' ? 'hub' : run.inputMethod === 'manual' ? 'edit' : 'bolt'}</span>
+							</div>
+							<div class="min-w-0 flex-1">
+								<p class="text-grey-900 text-sm font-medium truncate group-hover:text-violet-700 transition-colors">{run.name}</p>
+								<p class="text-grey-400 text-[10px]">{run.found}/{run.contactsCount} found · {run.startedAt}</p>
+							</div>
+							{#if run.status === 'running'}
+								<div class="flex flex-col items-end gap-0.5 shrink-0">
+									<span class="material-icons-round text-violet-500 text-base animate-spin" style="animation-duration: 1.5s;">sync</span>
+									<div class="bg-grey-200 h-1.5 w-12 overflow-hidden rounded-full">
+										<div class="h-full rounded-full bg-gradient-to-r from-violet-400 to-violet-600 enrichment-bar" style:width="{run.progress}%"></div>
+									</div>
+									<span class="text-violet-600 text-[10px] font-bold">{run.progress}%</span>
+								</div>
+							{:else if run.status === 'completed'}
+								<span class="material-icons-round text-emerald-500 text-sm shrink-0">check_circle</span>
+							{:else}
+								<span class="material-icons-round text-grey-300 text-sm shrink-0">schedule</span>
+							{/if}
+						</a>
+					{/each}
+					{#if v6Store.runs.length === 0}
+						<p class="text-grey-400 text-xs py-4 px-2">No enrichments yet</p>
+					{/if}
+				</div>
+			</div>
+		{/if}
 	</div>
 </div>
 

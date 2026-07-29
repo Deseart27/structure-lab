@@ -511,7 +511,7 @@
 	<p class="text-grey-400 text-sm">List not found.</p>
 </div>
 
-{:else if version === 'v9' && v8List}
+{:else if (version === 'v9' || version === 'v10') && v8List}
 <!-- V9 List Detail — side panel with donut charts + enrichment timeline -->
 {@const emailStats = (() => {
 	const stats = { valid: 0, catchAll: 0, invalid: 0, notFound: 0, pending: 0, total: v8Contacts.length };
@@ -793,7 +793,7 @@
 	</div>
 </div>
 
-{:else if version === 'v9' && !v8List}
+{:else if (version === 'v9' || version === 'v10') && !v8List}
 <div class="flex h-full items-center justify-center">
 	<p class="text-grey-400 text-sm">List not found.</p>
 </div>

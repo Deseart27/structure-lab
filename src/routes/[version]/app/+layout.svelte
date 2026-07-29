@@ -168,7 +168,7 @@
 {:else}
 <div class="flex min-h-screen min-w-screen flex-col">
 	<Navbar />
-	{#if version === 'v2' || version === 'v3' || version === 'v6' || version === 'v7' || version === 'v8' || version === 'v9'}
+	{#if version === 'v2' || version === 'v3' || version === 'v6' || version === 'v7' || version === 'v8' || version === 'v9' || version === 'v10'}
 		<SubNav />
 	{/if}
 	{@render children()}

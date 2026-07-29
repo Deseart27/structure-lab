@@ -97,7 +97,7 @@
 	}
 </script>
 
-{#if version === 'v9'}
+{#if version === 'v9' || version === 'v10'}
 	<!-- V9: No job detail — enrichment runs link directly to lists -->
 	<div class="flex h-full items-center justify-center">
 		<div class="text-center">
@@ -229,7 +229,7 @@
 							<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Phone</th>
 							<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Personal email</th>
 							<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Status</th>
-							{#if version === 'v9'}
+							{#if version === 'v9' || version === 'v10'}
 								<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">In list</th>
 							{/if}
 							<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Actions</th>
@@ -313,7 +313,7 @@
 								</td>
 
 								<!-- In list (V9 cross-link) -->
-								{#if version === 'v9'}
+								{#if version === 'v9' || version === 'v10'}
 									{@const contactLists = v6Store.getListsForContact(contact.id)}
 									<td class="px-4 py-3">
 										{#if contactLists.length > 0}

@@ -575,27 +575,90 @@
 		<span class="text-grey-700 font-medium">{run.name}</span>
 	</div>
 
-	<!-- Job banner -->
+	<!-- Job banner — 3-column: info | stats | actions -->
 	<div class="border-grey-200 shrink-0 border-b bg-grey-50 px-6 py-4">
-		<div class="flex items-start justify-between gap-4">
-			<div class="flex items-start gap-3 min-w-0">
+		<!-- Status bar (running/completed) -->
+		{#if run.status === 'running'}
+			<div class="flex items-center gap-2 mb-3">
+				<div class="bg-grey-200 h-2 flex-1 max-w-xs overflow-hidden rounded-full">
+					<div class="h-full rounded-full bg-gradient-to-r from-violet-400 to-violet-600" style:width="{run.progress}%"></div>
+				</div>
+				<span class="text-violet-600 text-xs font-bold">{run.progress}%</span>
+				<span class="text-grey-400 text-xs">· Running in the background</span>
+			</div>
+		{/if}
+
+		<div class="flex items-start gap-6">
+			<!-- Col 1: Job info -->
+			<div class="flex items-start gap-3 min-w-0 flex-1">
 				<div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl {run.status === 'running' ? 'bg-violet-100' : run.status === 'completed' ? 'bg-emerald-50' : run.status === 'completed-errors' ? 'bg-amber-50' : 'bg-grey-100'}">
 					<span class="material-icons-round text-lg {run.status === 'running' ? 'text-violet-600' : run.status === 'completed' ? 'text-emerald-600' : run.status === 'completed-errors' ? 'text-amber-600' : 'text-grey-400'}">{getSourceIcon(run.source, run.inputMethod)}</span>
 				</div>
 				<div class="min-w-0">
 					<div class="flex items-center gap-2">
-						<h2 class="text-grey-900 text-base font-semibold truncate">{run.name}</h2>
+						<h2 class="text-grey-900 text-sm font-semibold truncate">{run.name}</h2>
 						<span class="shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-medium {run.source === 'api' || run.source === 'mcp' ? 'border-blue-200 bg-blue-50 text-blue-600' : run.source === 'clay' || run.source === 'n8n' || run.source === 'make' || run.source === 'zapier' ? 'border-amber-200 bg-amber-50 text-amber-700' : 'border-grey-200 text-grey-500'}">{getSourceLabel(run.source, run.inputMethod)}</span>
+						{#if run.status === 'completed'}
+							<span class="material-icons-round text-emerald-500 text-sm">check_circle</span>
+						{:else if run.status === 'completed-errors'}
+							<span class="material-icons-round text-amber-500 text-sm">warning</span>
+						{/if}
 					</div>
-					<div class="flex items-center gap-4 mt-1.5 text-xs text-grey-500">
+					<div class="flex items-center gap-3 mt-1 text-xs text-grey-400">
 						<span>{run.startedAt}</span>
 						{#if run.launchedBy}<span>by {run.launchedBy}</span>{/if}
-						{#if run.creditsSpent}<span>{run.creditsSpent} credits</span>{/if}
+						<span>{run.contactsCount} contacts</span>
 					</div>
+					{#if run.status === 'completed-errors' && run.errorSummary}
+						<p class="text-amber-600 text-[10px] mt-1">{run.errorSummary}</p>
+					{/if}
 				</div>
 			</div>
 
-			<!-- Banner actions -->
+			<!-- Col 2: Enrichment stats -->
+			<div class="flex items-start gap-5 shrink-0">
+				{#if run.emailBreakdown}
+					{@const eTotal = run.emailBreakdown.valid + run.emailBreakdown.risky + run.emailBreakdown.invalid + run.emailBreakdown.notFound}
+					<div class="min-w-[120px]">
+						<p class="text-grey-400 text-[10px] font-semibold uppercase tracking-wider mb-1.5">Email</p>
+						<div class="flex h-2 w-full overflow-hidden rounded-full bg-grey-100">
+							<div class="h-full bg-emerald-500" style:width="{run.emailBreakdown.valid / eTotal * 100}%"></div>
+							<div class="h-full bg-amber-400" style:width="{run.emailBreakdown.risky / eTotal * 100}%"></div>
+							<div class="h-full bg-red-400" style:width="{run.emailBreakdown.invalid / eTotal * 100}%"></div>
+						</div>
+						<div class="flex items-center gap-2 mt-1.5 text-[10px]">
+							<span class="flex items-center gap-0.5"><span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span><span class="text-grey-500">{run.emailBreakdown.valid}</span></span>
+							<span class="flex items-center gap-0.5"><span class="h-1.5 w-1.5 rounded-full bg-amber-400"></span><span class="text-grey-500">{run.emailBreakdown.risky}</span></span>
+							<span class="flex items-center gap-0.5"><span class="h-1.5 w-1.5 rounded-full bg-red-400"></span><span class="text-grey-500">{run.emailBreakdown.invalid}</span></span>
+							<span class="flex items-center gap-0.5"><span class="h-1.5 w-1.5 rounded-full bg-grey-300"></span><span class="text-grey-500">{run.emailBreakdown.notFound}</span></span>
+						</div>
+					</div>
+				{/if}
+				{#if run.phoneBreakdown}
+					{@const pTotal = run.phoneBreakdown.found + run.phoneBreakdown.notFound}
+					<div class="min-w-[90px]">
+						<p class="text-grey-400 text-[10px] font-semibold uppercase tracking-wider mb-1.5">Phone</p>
+						<div class="flex h-2 w-full overflow-hidden rounded-full bg-grey-100">
+							<div class="h-full bg-blue-500" style:width="{run.phoneBreakdown.found / pTotal * 100}%"></div>
+						</div>
+						<div class="flex items-center gap-2 mt-1.5 text-[10px]">
+							<span class="flex items-center gap-0.5"><span class="h-1.5 w-1.5 rounded-full bg-blue-500"></span><span class="text-grey-500">{run.phoneBreakdown.found}</span></span>
+							<span class="flex items-center gap-0.5"><span class="h-1.5 w-1.5 rounded-full bg-grey-300"></span><span class="text-grey-500">{run.phoneBreakdown.notFound}</span></span>
+						</div>
+					</div>
+				{/if}
+				{#if run.creditsSpent}
+					<div class="min-w-[50px]">
+						<p class="text-grey-400 text-[10px] font-semibold uppercase tracking-wider mb-1.5">Credits</p>
+						<div class="flex items-center gap-1">
+							<span class="material-icons-round text-amber-400 text-sm">stars</span>
+							<span class="text-grey-900 text-sm font-semibold">{run.creditsSpent}</span>
+						</div>
+					</div>
+				{/if}
+			</div>
+
+			<!-- Col 3: Actions -->
 			<div class="flex items-center gap-2 shrink-0">
 				<button class="flex items-center gap-1.5 rounded-lg border border-grey-200 bg-white px-3 py-1.5 text-xs font-medium text-grey-700 shadow-sm transition-colors hover:bg-grey-50">
 					<span class="material-icons-round text-sm">download</span> Download
@@ -607,72 +670,6 @@
 					<span class="material-icons-round text-sm">playlist_add</span> Add to list
 				</button>
 			</div>
-		</div>
-
-		<!-- Status + data types row -->
-		<div class="mt-3 flex items-center gap-4">
-			{#if run.status === 'running'}
-				<div class="flex items-center gap-2">
-					<div class="bg-grey-200 h-2 w-24 overflow-hidden rounded-full">
-						<div class="h-full rounded-full bg-gradient-to-r from-violet-400 to-violet-600" style:width="{run.progress}%"></div>
-					</div>
-					<span class="text-violet-600 text-xs font-bold">{run.progress}%</span>
-					<span class="text-grey-400 text-xs">· Enrichment runs in the background — you can safely leave this page.</span>
-				</div>
-			{:else if run.status === 'completed'}
-				<div class="flex items-center gap-1.5">
-					<span class="material-icons-round text-emerald-500 text-sm">check_circle</span>
-					<span class="text-xs font-medium text-emerald-600">Completed</span>
-				</div>
-			{:else if run.status === 'completed-errors'}
-				<div class="flex items-center gap-1.5">
-					<span class="material-icons-round text-amber-500 text-sm">warning</span>
-					<span class="text-xs font-medium text-amber-600">Completed with errors</span>
-					{#if run.errorSummary}<span class="text-xs text-grey-400">— {run.errorSummary}</span>{/if}
-				</div>
-			{:else}
-				<div class="flex items-center gap-1.5">
-					<span class="material-icons-round text-grey-300 text-sm">schedule</span>
-					<span class="text-xs text-grey-500">Queued</span>
-				</div>
-			{/if}
-			</div>
-
-		<!-- Enrichment results -->
-		<div class="mt-3 flex items-center gap-6">
-			<div class="flex items-center gap-1.5 text-xs">
-				<span class="text-grey-400">Contacts</span>
-				<span class="text-grey-900 font-semibold">{run.contactsCount}</span>
-			</div>
-			<div class="flex items-center gap-1.5 text-xs">
-				<span class="text-grey-400">Found</span>
-				<span class="text-grey-900 font-semibold">{run.found}<span class="text-grey-400 font-normal">/{run.contactsCount}</span></span>
-			</div>
-			{#if run.foundByType?.email != null}
-				<div class="flex items-center gap-1 text-xs">
-					<span class="material-icons-round text-pink-400 text-sm">email</span>
-					<span class="text-grey-900 font-semibold">{run.foundByType.email}</span>
-				</div>
-			{/if}
-			{#if run.foundByType?.phone != null}
-				<div class="flex items-center gap-1 text-xs">
-					<span class="material-icons-round text-violet-400 text-sm">phone</span>
-					<span class="text-grey-900 font-semibold">{run.foundByType.phone}</span>
-				</div>
-			{/if}
-			{#if run.foundByType?.personal_email != null}
-				<div class="flex items-center gap-1 text-xs">
-					<span class="material-icons-round text-blue-400 text-sm">alternate_email</span>
-					<span class="text-grey-900 font-semibold">{run.foundByType.personal_email}</span>
-				</div>
-			{/if}
-			{#if run.creditsSpent}
-				<div class="flex items-center gap-1 text-xs">
-					<span class="material-icons-round text-amber-400 text-sm">stars</span>
-					<span class="text-grey-900 font-semibold">{run.creditsSpent}</span>
-					<span class="text-grey-400">credits</span>
-				</div>
-			{/if}
 		</div>
 	</div>
 

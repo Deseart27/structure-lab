@@ -2,6 +2,7 @@
 	import { base } from '$app/paths';
 
 	const versions = [
+		{ id: 'v11', name: 'Version 11', desc: 'V11 — iterating on top of V10.', entry: 'search' },
 		{ id: 'v10', name: 'Version 10', desc: 'V10 — iterating on top of V9 production model.', entry: 'search' },
 		{ id: 'v9', name: 'Version 9 — Production', desc: 'Forced lists + enrichment jobs as view layer. Cross-linked: enrichment shows "In list", lists show "Last enriched". Production-quality UI.', entry: 'search' },
 		{ id: 'v8', name: 'Version 8 — Auto Lists + Jobs', desc: 'Every enrichment auto-creates a list. Lists are the single object. Auto-created lists have provenance tags and can become manual lists.', entry: 'search' },

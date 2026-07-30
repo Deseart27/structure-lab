@@ -99,7 +99,69 @@
 		}
 	}
 
+	import { getSourceLabel, getSourceIcon } from '$lib/mock/v6.svelte';
 	import type { EmailStatus } from '$lib/mock/v6.svelte';
+
+	// V11: filter panel state
+	let v11FilterOpen = $state(true);
+	let v11FilterDataState = $state<'all' | 'enriched' | 'not-enriched'>('all');
+	let v11FilterHasEmail = $state(false);
+	let v11FilterHasPhone = $state(false);
+	let v11FilterEmailStatus = $state<string>('all');
+	let v11FilterCrmSync = $state<string>('all');
+	let v11FilterSource = $state<string>('all');
+	let v11FilterInList = $state<string>('all');
+
+	let v11FilteredContacts = $derived(() => {
+		if (version !== 'v11') return v9FilteredContacts;
+		let contacts = activeRun ? v6Store.getContactsForRun(activeRun) : [...v6Store.contacts];
+		if (v11FilterDataState === 'enriched') contacts = contacts.filter(c => c.email || c.phone);
+		if (v11FilterDataState === 'not-enriched') contacts = contacts.filter(c => !c.email && !c.phone);
+		if (v11FilterHasEmail) contacts = contacts.filter(c => !!c.email);
+		if (v11FilterHasPhone) contacts = contacts.filter(c => !!c.phone);
+		if (v11FilterEmailStatus !== 'all') contacts = contacts.filter(c => c.emailStatus === v11FilterEmailStatus);
+		if (v11FilterCrmSync !== 'all') contacts = contacts.filter(c => (c.crmPushStatus || 'not-pushed') === v11FilterCrmSync);
+		if (v11FilterSource !== 'all') {
+			const sourceJobs = v6Store.runs.filter(r => (r.source || r.inputMethod) === v11FilterSource);
+			const contactIds = new Set(sourceJobs.flatMap(r => r.contactIds));
+			contacts = contacts.filter(c => contactIds.has(c.id));
+		}
+		if (v11FilterInList !== 'all') {
+			if (v11FilterInList === 'none') {
+				contacts = contacts.filter(c => v6Store.getListsForContact(c.id).length === 0);
+			} else {
+				const list = v6Store.getList(v11FilterInList);
+				if (list) contacts = contacts.filter(c => list.memberIds.includes(c.id));
+			}
+		}
+		return contacts.sort((a, b) => (b.email ? 1 : 0) - (a.email ? 1 : 0));
+	});
+	let v11ActiveFilterCount = $derived(() => {
+		let c = 0;
+		if (v11FilterDataState !== 'all') c++;
+		if (v11FilterHasEmail) c++;
+		if (v11FilterHasPhone) c++;
+		if (v11FilterEmailStatus !== 'all') c++;
+		if (v11FilterCrmSync !== 'all') c++;
+		if (v11FilterSource !== 'all') c++;
+		if (v11FilterInList !== 'all') c++;
+		return c;
+	});
+	function v11ClearFilters() {
+		v11FilterDataState = 'all';
+		v11FilterHasEmail = false;
+		v11FilterHasPhone = false;
+		v11FilterEmailStatus = 'all';
+		v11FilterCrmSync = 'all';
+		v11FilterSource = 'all';
+		v11FilterInList = 'all';
+	}
+	function v11GetProvenances(contactId: string): { source: string; name: string }[] {
+		return v6Store.runs
+			.filter(r => r.contactIds.includes(contactId))
+			.slice(0, 2)
+			.map(r => ({ source: getSourceLabel(r.source, r.inputMethod), name: r.name }));
+	}
 	const emailStatusStyles: Record<EmailStatus, { label: string; color: string }> = {
 		valid: { label: 'Valid', color: 'text-emerald-700 bg-emerald-50' },
 		'catch-all': { label: 'Catch-all', color: 'text-amber-700 bg-amber-50' },
@@ -687,8 +749,295 @@
 	</div>
 </div>
 
+{:else if version === 'v11'}
+<!-- V11: All Contacts — filters as dropdown at table level -->
+{@const v11Contacts = v11FilteredContacts()}
+{@const v11Filters = v11ActiveFilterCount()}
+<div class="flex h-full flex-col">
+	<!-- Table header row: title + count + filter + actions -->
+	<div class="border-grey-200 flex h-14 shrink-0 items-center justify-between border-b px-6">
+		<div class="flex items-center gap-3">
+			<h1 class="text-grey-900 text-base font-semibold">All Contacts</h1>
+			<span class="text-grey-500 text-sm">{v11Contacts.length} contacts</span>
+			<!-- Filter button + dropdown -->
+			<div class="relative">
+				<button
+					class="flex h-7 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium transition-colors {v11Filters > 0 ? 'border-violet-300 bg-violet-50 text-violet-700' : 'border-grey-200 text-grey-500 hover:border-grey-300 hover:text-grey-700'}"
+					onclick={() => { v11FilterOpen = !v11FilterOpen; }}
+				>
+					<span class="material-icons-round text-sm">filter_list</span>
+					{#if v11Filters > 0}
+						{v11Filters} filter{v11Filters > 1 ? 's' : ''}
+					{:else}
+						Filter
+					{/if}
+				</button>
+
+				{#if v11FilterOpen}
+					<button class="fixed inset-0 z-40" onclick={() => { v11FilterOpen = false; }} aria-label="Close"></button>
+					<div class="absolute left-0 top-full z-50 mt-1 w-72 rounded-xl border border-grey-200 bg-white shadow-xl">
+						<div class="flex items-center justify-between px-4 pt-3 pb-2">
+							<p class="text-grey-700 text-xs font-semibold uppercase tracking-wider">Filters</p>
+							{#if v11Filters > 0}
+								<button class="text-violet-600 hover:text-violet-700 text-xs font-medium" onclick={v11ClearFilters}>Clear all</button>
+							{/if}
+						</div>
+						<div class="flex flex-col gap-3 px-4 pb-4">
+							<!-- Data state -->
+							<div>
+								<p class="text-grey-500 text-[10px] font-bold uppercase tracking-wider mb-1.5">Data state</p>
+								<div class="flex flex-col gap-1">
+									<label class="flex items-center gap-2 text-xs text-grey-700 cursor-pointer"><input type="radio" name="v11-datastate" value="all" bind:group={v11FilterDataState} class="accent-violet-700" /> All</label>
+									<label class="flex items-center gap-2 text-xs text-grey-700 cursor-pointer"><input type="radio" name="v11-datastate" value="enriched" bind:group={v11FilterDataState} class="accent-violet-700" /> Enriched</label>
+									<label class="flex items-center gap-2 text-xs text-grey-700 cursor-pointer"><input type="radio" name="v11-datastate" value="not-enriched" bind:group={v11FilterDataState} class="accent-violet-700" /> Not enriched</label>
+								</div>
+								<div class="flex flex-col gap-1 mt-1.5 ml-3">
+									<label class="flex items-center gap-2 text-xs text-grey-600 cursor-pointer"><input type="checkbox" bind:checked={v11FilterHasEmail} class="accent-violet-700 h-3 w-3" /> Has email</label>
+									<label class="flex items-center gap-2 text-xs text-grey-600 cursor-pointer"><input type="checkbox" bind:checked={v11FilterHasPhone} class="accent-violet-700 h-3 w-3" /> Has phone</label>
+								</div>
+							</div>
+							<!-- Email status -->
+							<div>
+								<p class="text-grey-500 text-[10px] font-bold uppercase tracking-wider mb-1.5">Email status</p>
+								<select class="w-full rounded-lg border border-grey-200 bg-white px-2.5 py-1.5 text-xs text-grey-700 focus:outline-none focus:ring-1 focus:ring-violet-300" bind:value={v11FilterEmailStatus}>
+									<option value="all">Any</option>
+									<option value="valid">Valid</option>
+									<option value="catch-all">Catch-all</option>
+									<option value="invalid-found">Invalid</option>
+									<option value="not-found">Not found</option>
+								</select>
+							</div>
+							<!-- CRM sync -->
+							<div>
+								<p class="text-grey-500 text-[10px] font-bold uppercase tracking-wider mb-1.5">CRM sync</p>
+								<select class="w-full rounded-lg border border-grey-200 bg-white px-2.5 py-1.5 text-xs text-grey-700 focus:outline-none focus:ring-1 focus:ring-violet-300" bind:value={v11FilterCrmSync}>
+									<option value="all">Any</option>
+									<option value="pushed">Pushed</option>
+									<option value="not-pushed">Not pushed</option>
+									<option value="failed">Push failed</option>
+								</select>
+							</div>
+							<!-- Source -->
+							<div>
+								<p class="text-grey-500 text-[10px] font-bold uppercase tracking-wider mb-1.5">Source</p>
+								<select class="w-full rounded-lg border border-grey-200 bg-white px-2.5 py-1.5 text-xs text-grey-700 focus:outline-none focus:ring-1 focus:ring-violet-300" bind:value={v11FilterSource}>
+									<option value="all">Any source</option>
+									<option value="csv">CSV</option>
+									<option value="manual">Manual</option>
+									<option value="search">Search</option>
+									<option value="reverse">Reverse</option>
+									<option value="crm">CRM</option>
+									<option value="api">API</option>
+									<option value="mcp">MCP</option>
+									<option value="clay">Clay</option>
+								</select>
+							</div>
+							<!-- In lists -->
+							<div>
+								<p class="text-grey-500 text-[10px] font-bold uppercase tracking-wider mb-1.5">In list</p>
+								<select class="w-full rounded-lg border border-grey-200 bg-white px-2.5 py-1.5 text-xs text-grey-700 focus:outline-none focus:ring-1 focus:ring-violet-300" bind:value={v11FilterInList}>
+									<option value="all">Any</option>
+									<option value="none">In no list</option>
+									{#each v6Store.lists.filter(l => l.type === 'people') as list}
+										<option value={list.id}>{list.name}</option>
+									{/each}
+								</select>
+							</div>
+						</div>
+					</div>
+				{/if}
+			</div>
+		</div>
+		<div class="flex items-center gap-2">
+			<button class="btn-ghost h-8 gap-1.5 px-3 text-sm" onclick={() => toast.show('Add contact — coming soon')}>
+				<span class="material-icons-round text-grey-600 text-base">person_add</span> Add contact
+			</button>
+			<button class="btn-ghost h-8 gap-1.5 px-3 text-sm" onclick={() => toast.show('Import CSV — coming soon')}>
+				<span class="material-icons-round text-grey-600 text-base">upload_file</span> Import
+			</button>
+			<div class="relative">
+				<button class="btn-ghost h-8 gap-1.5 px-3 text-sm" onclick={() => { v6ExportBool = !v6ExportBool; }}>
+					<span class="material-icons-round text-grey-600 text-base">download</span> Export
+					<span class="material-icons-round text-grey-400 text-sm">expand_more</span>
+				</button>
+				<ExportPopover bind:open={v6ExportBool} context="people" count={v9Selected.size > 0 ? v9Selected.size : v11Contacts.length} sourceName="All Contacts" />
+			</div>
+			<button class="btn-primary h-8 gap-1.5 px-3 text-sm" onclick={() => toast.show(`Enriching ${v9Selected.size > 0 ? v9Selected.size : v11Contacts.length} contacts…`)}>
+				<span class="material-icons-round text-sm text-white">auto_awesome</span> Enrich
+			</button>
+		</div>
+	</div>
+
+	<!-- Enrichment filter banner -->
+	{#if activeRun}
+		<div class="border-grey-200 flex items-center gap-3 border-b bg-violet-50/50 px-6 py-2">
+			<span class="material-icons-round text-sm text-violet-500">filter_alt</span>
+			<span class="text-sm text-violet-700">
+				Filtered by enrichment: <span class="font-medium">{activeRun.name}</span>
+				<span class="text-violet-400">· {activeRun.contactsCount} contacts · {activeRun.startedAt}</span>
+			</span>
+			<a
+				href="{base}/app/prospects?view=contacts"
+				class="ml-auto inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium text-violet-600 hover:bg-violet-100 transition-colors"
+			>
+				<span class="material-icons-round text-xs">close</span>
+				Clear
+			</a>
+		</div>
+	{/if}
+
+	<!-- Body: table + right enrichment panel -->
+	<div class="flex flex-1 overflow-hidden">
+	<div class="flex-1 overflow-auto">
+		<table class="w-full min-w-[900px]">
+			<thead class="sticky top-0 z-10">
+				<tr class="table-header">
+					<th class="w-10 px-3 py-3"><input type="checkbox" checked={v9Selected.size === v11Contacts.length && v11Contacts.length > 0} onchange={v9ToggleAll} class="accent-violet-700" /></th>
+					<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Name</th>
+					<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Company</th>
+					<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Title</th>
+					<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Email</th>
+					<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Phone</th>
+					<th class="w-8 px-1 py-3"></th>
+					<th class="text-grey-600 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">In lists</th>
+				</tr>
+			</thead>
+				<tbody class="bg-white">
+					{#each v11Contacts as contact}
+						{@const contactLists = v6Store.getListsForContact(contact.id)}
+						<tr class="border-grey-100 hover:bg-grey-50 border-b transition-colors {v9Selected.has(contact.id) ? 'bg-violet-50/40' : ''}">
+							<td class="w-10 px-3 py-3"><input type="checkbox" checked={v9Selected.has(contact.id)} onchange={() => v9ToggleContact(contact.id)} class="accent-violet-700" /></td>
+							<td class="px-4 py-3">
+								<div>
+									<p class="text-grey-900 text-sm font-medium">{contact.firstName} {contact.lastName}</p>
+									<p class="text-grey-400 text-xs">{contact.location}</p>
+								</div>
+							</td>
+							<td class="text-grey-700 px-4 py-3 text-sm">{contact.company}</td>
+							<td class="text-grey-600 px-4 py-3 text-sm">{contact.title}</td>
+							<td class="px-4 py-3">
+								{#if contact.email}
+									<div class="flex items-center gap-1.5">
+										<span class="material-icons-round text-sm text-pink-400">email</span>
+										<span class="text-grey-900 font-mono text-xs font-semibold">{contact.email}</span>
+										{#if contact.emailStatus === 'valid'}
+											<span class="material-icons-round text-sm text-emerald-500">check_circle</span>
+										{/if}
+									</div>
+								{:else}
+									<button
+										class="flex h-7 items-center gap-1 rounded-lg border border-grey-200 px-2 text-xs font-medium text-grey-500 transition-colors hover:border-pink-300 hover:text-pink-600"
+										onclick={() => toast.show(`Finding email for ${contact.firstName}…`)}
+									>
+										<span class="material-icons-round text-xs">email</span>
+										Find email
+									</button>
+								{/if}
+							</td>
+							<td class="px-4 py-3">
+								{#if contact.phone}
+									<div class="flex items-center gap-1.5">
+										<span class="material-icons-round text-sm text-violet-400">phone</span>
+										<span class="text-grey-900 font-mono text-xs">{contact.phone}</span>
+									</div>
+								{:else}
+									<button
+										class="flex h-7 items-center gap-1 rounded-lg border border-grey-200 px-2 text-xs font-medium text-grey-500 transition-colors hover:border-violet-300 hover:text-violet-600"
+										onclick={() => toast.show(`Finding phone for ${contact.firstName}…`)}
+									>
+										<span class="material-icons-round text-xs">phone</span>
+										Find phone
+									</button>
+								{/if}
+							</td>
+							<td class="px-1 py-3">
+								<button
+									class="flex h-7 w-7 items-center justify-center rounded-lg transition-colors {contact.hubspotSynced ? 'opacity-100' : 'opacity-40 hover:opacity-70'}"
+									title={contact.hubspotSynced ? 'Already in HubSpot' : 'Push to HubSpot'}
+									onclick={() => toast.show(contact.hubspotSynced ? `${contact.firstName} ${contact.lastName} is already in HubSpot` : `Pushing ${contact.firstName} ${contact.lastName} to HubSpot…`)}
+								>
+									<svg class="h-3.5 w-3.5" viewBox="0 0 1024 1024">
+										<circle cx="512" cy="512" r="512" fill={contact.hubspotSynced ? '#FF7A59' : '#9CA3AF'}/>
+										<path d="M623.8 624.94c-38.23 0-69.24-30.67-69.24-68.51s31-68.52 69.24-68.52 69.26 30.67 69.26 68.52-31 68.51-69.26 68.51m20.74-200.42v-61a46.83 46.83 0 0 0 27.33-42.29v-1.41c0-25.78-21.32-46.86-47.35-46.86h-1.43c-26 0-47.35 21.09-47.35 46.86v1.41a46.85 46.85 0 0 0 27.33 42.29v61a135.08 135.08 0 0 0-63.86 27.79l-169.1-130.17A52.49 52.49 0 0 0 372 309c0-29.21-23.89-52.92-53.4-53s-53.45 23.59-53.48 52.81 23.85 52.88 53.36 52.93a53.29 53.29 0 0 0 26.33-7.09l166.38 128.1a132.14 132.14 0 0 0 2.07 150.3l-50.62 50.1A43.42 43.42 0 1 0 450.1 768c24.24 0 43.9-19.46 43.9-43.45a42.24 42.24 0 0 0-2-12.42l50-49.52a135.28 135.28 0 0 0 81.8 27.47c74.61 0 135.06-59.83 135.06-133.65 0-66.82-49.62-122-114.33-131.91" fill="#fff" fill-rule="evenodd"/>
+									</svg>
+								</button>
+							</td>
+							<td class="px-4 py-3">
+								{#if contactLists.length > 0}
+									<div class="flex flex-wrap gap-1">
+										{#each contactLists.slice(0, 2) as clist}
+											<a href="{base}/app/prospects/{clist.id}" class="inline-flex items-center gap-1 rounded-full border border-grey-200 bg-grey-50 px-2 py-0.5 text-xs font-medium text-grey-700 hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700 transition-colors">
+												<span class="material-icons-round text-[10px]">folder</span>
+												<span class="max-w-[100px] truncate">{clist.name}</span>
+											</a>
+										{/each}
+										{#if contactLists.length > 2}
+											<span class="text-grey-400 text-xs">+{contactLists.length - 2}</span>
+										{/if}
+									</div>
+								{:else}
+									<span class="text-grey-300 text-xs">—</span>
+								{/if}
+							</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+	</div>
+
+	<!-- Right panel: Enrichment jobs (collapsible, same as V10) -->
+	<div class="relative flex shrink-0">
+		<button
+			class="absolute -left-8 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-l-lg border border-r-0 border-grey-200 bg-white text-grey-400 shadow-sm transition-colors hover:bg-grey-50 hover:text-grey-600"
+			onclick={() => { v10PanelOpen = !v10PanelOpen; }}
+			title={v10PanelOpen ? 'Close enrichments panel' : 'Open enrichments panel'}
+		>
+			<span class="material-icons-round text-base">{v10PanelOpen ? 'chevron_right' : 'auto_awesome'}</span>
+		</button>
+
+		{#if v10PanelOpen}
+		<div class="border-grey-200 w-72 border-l bg-white overflow-y-auto">
+			<div class="flex items-center justify-between px-5 pt-5 pb-3">
+				<p class="text-grey-700 text-xs font-semibold uppercase tracking-wider">Enrichments</p>
+				{#if activeRun}
+					<a href="{base}/app/prospects?view=contacts" class="text-violet-600 hover:text-violet-700 text-xs font-medium">Clear filter</a>
+				{/if}
+			</div>
+			<div class="flex flex-col gap-0.5 px-3 pb-4">
+				{#each v6Store.runs as run}
+					<a
+						href="{base}/app/prospects?view=contacts&enrichment={run.id}"
+						class="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-left transition-all group
+							{activeRun?.id === run.id ? 'border-2 border-violet-400 bg-violet-50/50 shadow-sm' : activeRun ? 'border border-transparent opacity-50 hover:opacity-80' : 'border border-transparent hover:bg-grey-50'}"
+					>
+						<div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg {activeRun?.id === run.id ? 'bg-violet-100' : 'bg-grey-100 group-hover:bg-violet-50'} transition-colors">
+							<span class="material-icons-round text-base {activeRun?.id === run.id ? 'text-violet-600' : 'text-grey-500 group-hover:text-violet-600'} transition-colors">{getSourceIcon(run.source, run.inputMethod)}</span>
+						</div>
+						<div class="min-w-0 flex-1">
+							<p class="text-grey-900 text-sm font-medium truncate group-hover:text-violet-700 transition-colors">{run.name}</p>
+							<p class="text-grey-400 text-[10px]">{run.found}/{run.contactsCount} found · {run.startedAt}</p>
+						</div>
+						{#if run.status === 'running'}
+							<div class="flex flex-col items-end gap-0.5 shrink-0">
+								<span class="material-icons-round text-violet-500 text-base animate-spin" style="animation-duration: 1.5s;">sync</span>
+								<div class="bg-grey-200 h-1.5 w-12 overflow-hidden rounded-full">
+									<div class="h-full rounded-full bg-gradient-to-r from-violet-400 to-violet-600 enrichment-bar" style:width="{run.progress}%"></div>
+								</div>
+							</div>
+						{:else if run.status === 'completed'}
+							<span class="material-icons-round text-emerald-500 text-sm shrink-0">check_circle</span>
+						{/if}
+					</a>
+				{/each}
+			</div>
+		</div>
+		{/if}
+	</div>
+	</div>
+</div>
+
 {:else if version === 'v9' || version === 'v10'}
-<!-- V9: All Contacts view — contact is the core object -->
+<!-- V9/V10: All Contacts view — contact is the core object -->
 <div class="flex h-full flex-col">
 	<!-- Header -->
 	<div class="border-grey-200 flex h-14 shrink-0 items-center justify-between border-b px-6">

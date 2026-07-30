@@ -615,41 +615,55 @@
 				</div>
 			</div>
 
-			<!-- Col 2: Enrichment stats -->
-			<div class="flex items-start gap-5 shrink-0">
+			<!-- Col 2: Enrichment stats (donut charts) -->
+			<div class="flex items-start gap-6 shrink-0">
 				{#if run.emailBreakdown}
 					{@const eTotal = run.emailBreakdown.valid + run.emailBreakdown.risky + run.emailBreakdown.invalid + run.emailBreakdown.notFound}
-					<div class="min-w-[120px]">
-						<p class="text-grey-400 text-[10px] font-semibold uppercase tracking-wider mb-1.5">Email</p>
-						<div class="flex h-2 w-full overflow-hidden rounded-full bg-grey-100">
-							<div class="h-full bg-emerald-500" style:width="{run.emailBreakdown.valid / eTotal * 100}%"></div>
-							<div class="h-full bg-amber-400" style:width="{run.emailBreakdown.risky / eTotal * 100}%"></div>
-							<div class="h-full bg-red-400" style:width="{run.emailBreakdown.invalid / eTotal * 100}%"></div>
-						</div>
-						<div class="flex items-center gap-2 mt-1.5 text-[10px]">
-							<span class="flex items-center gap-0.5"><span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span><span class="text-grey-500">{run.emailBreakdown.valid}</span></span>
-							<span class="flex items-center gap-0.5"><span class="h-1.5 w-1.5 rounded-full bg-amber-400"></span><span class="text-grey-500">{run.emailBreakdown.risky}</span></span>
-							<span class="flex items-center gap-0.5"><span class="h-1.5 w-1.5 rounded-full bg-red-400"></span><span class="text-grey-500">{run.emailBreakdown.invalid}</span></span>
-							<span class="flex items-center gap-0.5"><span class="h-1.5 w-1.5 rounded-full bg-grey-300"></span><span class="text-grey-500">{run.emailBreakdown.notFound}</span></span>
+					{@const eValidPct = run.emailBreakdown.valid / eTotal * 100}
+					{@const eRiskyPct = run.emailBreakdown.risky / eTotal * 100}
+					{@const eInvalidPct = run.emailBreakdown.invalid / eTotal * 100}
+					<div class="flex items-center gap-3">
+						<svg viewBox="0 0 36 36" class="h-12 w-12 shrink-0">
+							<circle cx="18" cy="18" r="15.915" fill="none" stroke="#e5e7eb" stroke-width="3" />
+							<circle cx="18" cy="18" r="15.915" fill="none" stroke="#10b981" stroke-width="3"
+								stroke-dasharray="{eValidPct} {100 - eValidPct}" stroke-dashoffset="25" stroke-linecap="round" />
+							<circle cx="18" cy="18" r="15.915" fill="none" stroke="#fbbf24" stroke-width="3"
+								stroke-dasharray="{eRiskyPct} {100 - eRiskyPct}" stroke-dashoffset="{25 - eValidPct}" stroke-linecap="round" />
+							<circle cx="18" cy="18" r="15.915" fill="none" stroke="#f87171" stroke-width="3"
+								stroke-dasharray="{eInvalidPct} {100 - eInvalidPct}" stroke-dashoffset="{25 - eValidPct - eRiskyPct}" stroke-linecap="round" />
+							<text x="18" y="17" text-anchor="middle" dominant-baseline="middle" class="fill-grey-900 text-[7px] font-bold">{run.emailBreakdown.valid + run.emailBreakdown.risky}</text>
+							<text x="18" y="22" text-anchor="middle" dominant-baseline="middle" class="fill-grey-400 text-[4px]">found</text>
+						</svg>
+						<div class="flex flex-col gap-0.5 text-[10px]">
+							<p class="text-grey-500 text-[10px] font-semibold uppercase tracking-wider mb-0.5">Email</p>
+							<span class="flex items-center gap-1"><span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span><span class="text-grey-500">Valid</span><span class="text-grey-900 font-medium ml-auto">{run.emailBreakdown.valid}</span></span>
+							<span class="flex items-center gap-1"><span class="h-1.5 w-1.5 rounded-full bg-amber-400"></span><span class="text-grey-500">Risky</span><span class="text-grey-900 font-medium ml-auto">{run.emailBreakdown.risky}</span></span>
+							<span class="flex items-center gap-1"><span class="h-1.5 w-1.5 rounded-full bg-red-400"></span><span class="text-grey-500">Invalid</span><span class="text-grey-900 font-medium ml-auto">{run.emailBreakdown.invalid}</span></span>
+							<span class="flex items-center gap-1"><span class="h-1.5 w-1.5 rounded-full bg-grey-300"></span><span class="text-grey-500">Not found</span><span class="text-grey-900 font-medium ml-auto">{run.emailBreakdown.notFound}</span></span>
 						</div>
 					</div>
 				{/if}
 				{#if run.phoneBreakdown}
 					{@const pTotal = run.phoneBreakdown.found + run.phoneBreakdown.notFound}
-					<div class="min-w-[90px]">
-						<p class="text-grey-400 text-[10px] font-semibold uppercase tracking-wider mb-1.5">Phone</p>
-						<div class="flex h-2 w-full overflow-hidden rounded-full bg-grey-100">
-							<div class="h-full bg-blue-500" style:width="{run.phoneBreakdown.found / pTotal * 100}%"></div>
-						</div>
-						<div class="flex items-center gap-2 mt-1.5 text-[10px]">
-							<span class="flex items-center gap-0.5"><span class="h-1.5 w-1.5 rounded-full bg-blue-500"></span><span class="text-grey-500">{run.phoneBreakdown.found}</span></span>
-							<span class="flex items-center gap-0.5"><span class="h-1.5 w-1.5 rounded-full bg-grey-300"></span><span class="text-grey-500">{run.phoneBreakdown.notFound}</span></span>
+					{@const pFoundPct = run.phoneBreakdown.found / pTotal * 100}
+					<div class="flex items-center gap-3">
+						<svg viewBox="0 0 36 36" class="h-12 w-12 shrink-0">
+							<circle cx="18" cy="18" r="15.915" fill="none" stroke="#e5e7eb" stroke-width="3" />
+							<circle cx="18" cy="18" r="15.915" fill="none" stroke="#3b82f6" stroke-width="3"
+								stroke-dasharray="{pFoundPct} {100 - pFoundPct}" stroke-dashoffset="25" stroke-linecap="round" />
+							<text x="18" y="17" text-anchor="middle" dominant-baseline="middle" class="fill-grey-900 text-[7px] font-bold">{run.phoneBreakdown.found}</text>
+							<text x="18" y="22" text-anchor="middle" dominant-baseline="middle" class="fill-grey-400 text-[4px]">found</text>
+						</svg>
+						<div class="flex flex-col gap-0.5 text-[10px]">
+							<p class="text-grey-500 text-[10px] font-semibold uppercase tracking-wider mb-0.5">Phone</p>
+							<span class="flex items-center gap-1"><span class="h-1.5 w-1.5 rounded-full bg-blue-500"></span><span class="text-grey-500">Found</span><span class="text-grey-900 font-medium ml-auto">{run.phoneBreakdown.found}</span></span>
+							<span class="flex items-center gap-1"><span class="h-1.5 w-1.5 rounded-full bg-grey-300"></span><span class="text-grey-500">Not found</span><span class="text-grey-900 font-medium ml-auto">{run.phoneBreakdown.notFound}</span></span>
 						</div>
 					</div>
 				{/if}
 				{#if run.creditsSpent}
-					<div class="min-w-[50px]">
-						<p class="text-grey-400 text-[10px] font-semibold uppercase tracking-wider mb-1.5">Credits</p>
+					<div class="flex flex-col items-center justify-center">
+						<p class="text-grey-500 text-[10px] font-semibold uppercase tracking-wider mb-1">Credits</p>
 						<div class="flex items-center gap-1">
 							<span class="material-icons-round text-amber-400 text-sm">stars</span>
 							<span class="text-grey-900 text-sm font-semibold">{run.creditsSpent}</span>

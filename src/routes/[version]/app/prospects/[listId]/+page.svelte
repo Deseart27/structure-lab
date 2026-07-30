@@ -2,7 +2,7 @@
 	import { base as svelteBase } from '$app/paths';
 	import { page } from '$app/stores';
 	import { toast } from '$lib/toast.svelte';
-	import { v6Store } from '$lib/mock/v6.svelte';
+	import { v6Store, getSourceLabel, getSourceIcon } from '$lib/mock/v6.svelte';
 	import ExportPopover from '$lib/components/ExportPopover.svelte';
 
 	let base = $derived(`${svelteBase}/${$page.params.version}`);
@@ -65,6 +65,60 @@
 		} else {
 			v9ListSelected = new Set(v9DisplayContacts.map(c => c.id));
 		}
+	}
+
+	// V11: enrichment chips that intersect this list
+	let v11ListRuns = $derived(v8List ? v6Store.getRunsIntersectingList(v8List.id) : []);
+	let v11ScopedRunId = $state<string | null>(null);
+	let v11ScopedContacts = $derived(() => {
+		if (!v11ScopedRunId || !v8List) return v9DisplayContacts;
+		const run = v6Store.getRun(v11ScopedRunId);
+		if (!run) return v9DisplayContacts;
+		return v8Contacts.filter(c => run.contactIds.includes(c.id) && v8List!.memberIds.includes(c.id));
+	});
+
+	// V11: list-level filters (same as All Contacts)
+	let v11ListFilterOpen = $state(false);
+	let v11LFilterDataState = $state<'all' | 'enriched' | 'not-enriched'>('all');
+	let v11LFilterHasEmail = $state(false);
+	let v11LFilterHasPhone = $state(false);
+	let v11LFilterEmailStatus = $state<string>('all');
+	let v11LFilterCrmSync = $state<string>('all');
+	let v11LFilterSource = $state<string>('all');
+
+	let v11LFilteredContacts = $derived(() => {
+		if (version !== 'v11') return v9DisplayContacts;
+		let contacts = [...v9DisplayContacts];
+		if (v11LFilterDataState === 'enriched') contacts = contacts.filter(c => c.email || c.phone);
+		if (v11LFilterDataState === 'not-enriched') contacts = contacts.filter(c => !c.email && !c.phone);
+		if (v11LFilterHasEmail) contacts = contacts.filter(c => !!c.email);
+		if (v11LFilterHasPhone) contacts = contacts.filter(c => !!c.phone);
+		if (v11LFilterEmailStatus !== 'all') contacts = contacts.filter(c => c.emailStatus === v11LFilterEmailStatus);
+		if (v11LFilterCrmSync !== 'all') contacts = contacts.filter(c => (c.crmPushStatus || 'not-pushed') === v11LFilterCrmSync);
+		if (v11LFilterSource !== 'all') {
+			const sourceJobs = v6Store.runs.filter(r => (r.source || r.inputMethod) === v11LFilterSource);
+			const contactIds = new Set(sourceJobs.flatMap(r => r.contactIds));
+			contacts = contacts.filter(c => contactIds.has(c.id));
+		}
+		return contacts;
+	});
+	let v11LFilterCount = $derived(() => {
+		let c = 0;
+		if (v11LFilterDataState !== 'all') c++;
+		if (v11LFilterHasEmail) c++;
+		if (v11LFilterHasPhone) c++;
+		if (v11LFilterEmailStatus !== 'all') c++;
+		if (v11LFilterCrmSync !== 'all') c++;
+		if (v11LFilterSource !== 'all') c++;
+		return c;
+	});
+	function v11LClearFilters() {
+		v11LFilterDataState = 'all';
+		v11LFilterHasEmail = false;
+		v11LFilterHasPhone = false;
+		v11LFilterEmailStatus = 'all';
+		v11LFilterCrmSync = 'all';
+		v11LFilterSource = 'all';
 	}
 
 	const emailStatusStyles: Record<string, { label: string; color: string }> = {
@@ -511,8 +565,8 @@
 	<p class="text-grey-400 text-sm">List not found.</p>
 </div>
 
-{:else if (version === 'v9' || version === 'v10') && v8List}
-<!-- V9 List Detail — side panel with donut charts + enrichment timeline -->
+{:else if (version === 'v9' || version === 'v10' || version === 'v11') && v8List}
+<!-- V9/V10/V11 List Detail -->
 {@const emailStats = (() => {
 	const stats = { valid: 0, catchAll: 0, invalid: 0, notFound: 0, pending: 0, total: v8Contacts.length };
 	for (const c of v8Contacts) {
@@ -535,12 +589,72 @@
 			<h1 class="text-grey-900 text-base font-semibold">{v8List.name}</h1>
 			{#if v8List.type === 'people'}
 				<span class="inline-flex items-center rounded-full bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-700">People</span>
-				<span class="text-grey-500 text-sm">{v8Contacts.length} contacts</span>
+				<span class="text-grey-500 text-sm">{version === 'v11' ? v11LFilteredContacts().length : v8Contacts.length} contacts</span>
 			{:else}
 				<span class="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">Company</span>
 				<span class="text-grey-500 text-sm">{v8Companies.length} companies</span>
 			{/if}
-			{#if v8ActiveRun}
+			{#if version === 'v11' && v8List.type === 'people'}
+				<!-- V11: filter dropdown at table level -->
+				{@const fc = v11LFilterCount()}
+				<div class="relative">
+					<button
+						class="flex h-7 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium transition-colors {fc > 0 ? 'border-violet-300 bg-violet-50 text-violet-700' : 'border-grey-200 text-grey-500 hover:border-grey-300 hover:text-grey-700'}"
+						onclick={() => { v11ListFilterOpen = !v11ListFilterOpen; }}
+					>
+						<span class="material-icons-round text-sm">filter_list</span>
+						{#if fc > 0}
+							{fc} filter{fc > 1 ? 's' : ''}
+						{:else}
+							Filter
+						{/if}
+					</button>
+
+					{#if v11ListFilterOpen}
+						<button class="fixed inset-0 z-40" onclick={() => { v11ListFilterOpen = false; }} aria-label="Close"></button>
+						<div class="absolute left-0 top-full z-50 mt-1 w-72 rounded-xl border border-grey-200 bg-white shadow-xl">
+							<div class="flex items-center justify-between px-4 pt-3 pb-2">
+								<p class="text-grey-700 text-xs font-semibold uppercase tracking-wider">Filters</p>
+								{#if fc > 0}
+									<button class="text-violet-600 hover:text-violet-700 text-xs font-medium" onclick={v11LClearFilters}>Clear all</button>
+								{/if}
+							</div>
+							<div class="flex flex-col gap-3 px-4 pb-4">
+								<div>
+									<p class="text-grey-500 text-[10px] font-bold uppercase tracking-wider mb-1.5">Data state</p>
+									<div class="flex flex-col gap-1">
+										<label class="flex items-center gap-2 text-xs text-grey-700 cursor-pointer"><input type="radio" name="v11l-datastate" value="all" bind:group={v11LFilterDataState} class="accent-violet-700" /> All</label>
+										<label class="flex items-center gap-2 text-xs text-grey-700 cursor-pointer"><input type="radio" name="v11l-datastate" value="enriched" bind:group={v11LFilterDataState} class="accent-violet-700" /> Enriched</label>
+										<label class="flex items-center gap-2 text-xs text-grey-700 cursor-pointer"><input type="radio" name="v11l-datastate" value="not-enriched" bind:group={v11LFilterDataState} class="accent-violet-700" /> Not enriched</label>
+									</div>
+									<div class="flex flex-col gap-1 mt-1.5 ml-3">
+										<label class="flex items-center gap-2 text-xs text-grey-600 cursor-pointer"><input type="checkbox" bind:checked={v11LFilterHasEmail} class="accent-violet-700 h-3 w-3" /> Has email</label>
+										<label class="flex items-center gap-2 text-xs text-grey-600 cursor-pointer"><input type="checkbox" bind:checked={v11LFilterHasPhone} class="accent-violet-700 h-3 w-3" /> Has phone</label>
+									</div>
+								</div>
+								<div>
+									<p class="text-grey-500 text-[10px] font-bold uppercase tracking-wider mb-1.5">Email status</p>
+									<select class="w-full rounded-lg border border-grey-200 bg-white px-2.5 py-1.5 text-xs text-grey-700 focus:outline-none focus:ring-1 focus:ring-violet-300" bind:value={v11LFilterEmailStatus}>
+										<option value="all">Any</option><option value="valid">Valid</option><option value="catch-all">Catch-all</option><option value="invalid-found">Invalid</option><option value="not-found">Not found</option>
+									</select>
+								</div>
+								<div>
+									<p class="text-grey-500 text-[10px] font-bold uppercase tracking-wider mb-1.5">CRM sync</p>
+									<select class="w-full rounded-lg border border-grey-200 bg-white px-2.5 py-1.5 text-xs text-grey-700 focus:outline-none focus:ring-1 focus:ring-violet-300" bind:value={v11LFilterCrmSync}>
+										<option value="all">Any</option><option value="pushed">Pushed</option><option value="not-pushed">Not pushed</option><option value="failed">Push failed</option>
+									</select>
+								</div>
+								<div>
+									<p class="text-grey-500 text-[10px] font-bold uppercase tracking-wider mb-1.5">Source</p>
+									<select class="w-full rounded-lg border border-grey-200 bg-white px-2.5 py-1.5 text-xs text-grey-700 focus:outline-none focus:ring-1 focus:ring-violet-300" bind:value={v11LFilterSource}>
+										<option value="all">Any source</option><option value="csv">CSV</option><option value="manual">Manual</option><option value="search">Search</option><option value="reverse">Reverse</option><option value="crm">CRM</option><option value="api">API</option><option value="mcp">MCP</option><option value="clay">Clay</option>
+									</select>
+								</div>
+							</div>
+						</div>
+					{/if}
+				</div>
+			{:else if v8ActiveRun}
 				<span class="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700">
 					<span class="material-icons-round text-xs animate-spin" style="animation-duration:1.5s">sync</span>
 					Enriching {v8ActiveRun.progress}%
@@ -625,7 +739,13 @@
 											{/if}
 										</div>
 									{:else}
-										<span class="text-grey-300 text-xs">—</span>
+										<button
+											class="flex h-7 items-center gap-1 rounded-lg border border-grey-200 px-2 text-xs font-medium text-grey-500 transition-colors hover:border-pink-300 hover:text-pink-600"
+											onclick={() => toast.show(`Finding email for ${contact.firstName}…`)}
+										>
+											<span class="material-icons-round text-xs">email</span>
+											Find email
+										</button>
 									{/if}
 								</td>
 								<td class="px-4 py-3">
@@ -704,96 +824,135 @@
 		<!-- Right side panel -->
 		{#if v8List.type === 'people'}
 		<div class="border-grey-200 w-72 shrink-0 border-l bg-white overflow-y-auto">
-			<!-- Email donut -->
-			<div class="border-b border-grey-100 px-5 py-5">
-				<p class="text-grey-700 mb-3 text-xs font-semibold uppercase tracking-wider">Email results</p>
-				<div class="flex items-center gap-4">
-					<svg viewBox="0 0 36 36" class="h-16 w-16 shrink-0">
-						<circle cx="18" cy="18" r="15.915" fill="none" stroke="#f3f4f6" stroke-width="3" />
-						<circle cx="18" cy="18" r="15.915" fill="none" stroke="#10b981" stroke-width="3"
-							stroke-dasharray="{emailStats.valid / (emailStats.total || 1) * 100} {100 - emailStats.valid / (emailStats.total || 1) * 100}" stroke-dashoffset="25" stroke-linecap="round" />
-						<circle cx="18" cy="18" r="15.915" fill="none" stroke="#f59e0b" stroke-width="3"
-							stroke-dasharray="{emailStats.catchAll / (emailStats.total || 1) * 100} {100 - emailStats.catchAll / (emailStats.total || 1) * 100}" stroke-dashoffset="{25 - emailStats.valid / (emailStats.total || 1) * 100}" stroke-linecap="round" />
-						<circle cx="18" cy="18" r="15.915" fill="none" stroke="#ef4444" stroke-width="3"
-							stroke-dasharray="{emailStats.invalid / (emailStats.total || 1) * 100} {100 - emailStats.invalid / (emailStats.total || 1) * 100}" stroke-dashoffset="{25 - emailStats.valid / (emailStats.total || 1) * 100 - emailStats.catchAll / (emailStats.total || 1) * 100}" stroke-linecap="round" />
-						<text x="18" y="18.5" text-anchor="middle" dominant-baseline="middle" class="fill-grey-900 text-[7px] font-bold">{emailStats.valid + emailStats.catchAll}</text>
-						<text x="18" y="23" text-anchor="middle" dominant-baseline="middle" class="fill-grey-400 text-[4px]">found</text>
-					</svg>
-					<div class="flex flex-col gap-1 text-xs">
-						<div class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-emerald-500"></span><span class="text-grey-600">Valid</span><span class="text-grey-900 ml-auto font-medium">{emailStats.valid}</span></div>
-						<div class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-amber-500"></span><span class="text-grey-600">Catch-all</span><span class="text-grey-900 ml-auto font-medium">{emailStats.catchAll}</span></div>
-						<div class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-red-500"></span><span class="text-grey-600">Invalid</span><span class="text-grey-900 ml-auto font-medium">{emailStats.invalid}</span></div>
-						<div class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-grey-300"></span><span class="text-grey-600">Not found</span><span class="text-grey-900 ml-auto font-medium">{emailStats.notFound}</span></div>
-					</div>
-				</div>
-			</div>
 
-			<!-- Phone donut -->
-			<div class="border-b border-grey-100 px-5 py-5">
-				<p class="text-grey-700 mb-3 text-xs font-semibold uppercase tracking-wider">Phone results</p>
-				<div class="flex items-center gap-4">
-					<svg viewBox="0 0 36 36" class="h-16 w-16 shrink-0">
-						<circle cx="18" cy="18" r="15.915" fill="none" stroke="#f3f4f6" stroke-width="3" />
-						<circle cx="18" cy="18" r="15.915" fill="none" stroke="#3b82f6" stroke-width="3"
-							stroke-dasharray="{phoneStats.found / (phoneStats.total || 1) * 100} {100 - phoneStats.found / (phoneStats.total || 1) * 100}" stroke-dashoffset="25" stroke-linecap="round" />
-						<text x="18" y="18.5" text-anchor="middle" dominant-baseline="middle" class="fill-grey-900 text-[7px] font-bold">{phoneStats.found}</text>
-						<text x="18" y="23" text-anchor="middle" dominant-baseline="middle" class="fill-grey-400 text-[4px]">found</text>
-					</svg>
-					<div class="flex flex-col gap-1 text-xs">
-						<div class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-blue-500"></span><span class="text-grey-600">Found</span><span class="text-grey-900 ml-auto font-medium">{phoneStats.found}</span></div>
-						<div class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-grey-300"></span><span class="text-grey-600">Not found</span><span class="text-grey-900 ml-auto font-medium">{phoneStats.notFound}</span></div>
-					</div>
-				</div>
-			</div>
+			{#if version === 'v11'}
+				{@const enrichedCount = v8Contacts.filter(c => c.email || c.phone).length}
+				{@const notEnrichedCount = v8Contacts.length - enrichedCount}
+				{@const enrichedPct = v8Contacts.length > 0 ? Math.round(enrichedCount / v8Contacts.length * 100) : 0}
+				{@const withEmail = v8Contacts.filter(c => c.email).length}
+				{@const withPhone = v8Contacts.filter(c => c.phone).length}
 
-			<!-- Enrichment timeline -->
-			<div class="px-5 py-5">
-				<div class="flex items-center justify-between mb-3">
-					<p class="text-grey-700 text-xs font-semibold uppercase tracking-wider">Enrichments</p>
-					{#if v9SelectedRun}
-						<button class="text-violet-600 hover:text-violet-700 text-xs font-medium" onclick={() => { v9SelectedRun = null; }}>Show all</button>
-					{/if}
-				</div>
-				<div class="flex flex-col gap-0.5">
-					{#each v8ListRuns as run}
+				<!-- Enrichment coverage -->
+				<div class="border-b border-grey-100 px-5 py-5">
+					<p class="text-grey-700 mb-3 text-xs font-semibold uppercase tracking-wider">List stats</p>
+					<div class="flex items-baseline justify-between mb-2">
+						<span class="text-grey-900 text-sm font-bold">{enrichedPct}% enriched</span>
+						<span class="text-grey-400 text-xs">{enrichedCount}/{v8Contacts.length}</span>
+					</div>
+					<div class="bg-grey-100 h-2 w-full overflow-hidden rounded-full">
+						<div class="h-full rounded-full bg-violet-500 transition-all" style:width="{enrichedPct}%"></div>
+					</div>
+					{#if notEnrichedCount > 0}
 						<button
-							class="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-left transition-all group
-								{v9SelectedRun === run.id ? 'border-2 border-violet-400 bg-violet-50/50 shadow-sm' : v9SelectedRun ? 'border border-transparent opacity-50 hover:opacity-80' : 'border border-transparent hover:bg-grey-50'}"
-							onclick={() => { v9SelectedRun = v9SelectedRun === run.id ? null : run.id; }}
+							class="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg border border-violet-300 bg-violet-50 px-3 py-2 text-xs font-medium text-violet-700 transition-colors hover:bg-violet-100"
+							onclick={() => toast.show(`Enriching ${notEnrichedCount} remaining contacts…`)}
 						>
-							<div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg {v9SelectedRun === run.id ? 'bg-violet-100' : 'bg-grey-100 group-hover:bg-violet-50'} transition-colors">
-								<span class="material-icons-round text-base {v9SelectedRun === run.id ? 'text-violet-600' : 'text-grey-500 group-hover:text-violet-600'} transition-colors">{run.inputMethod === 'csv' ? 'description' : run.inputMethod === 'search' ? 'search' : run.inputMethod === 'crm' ? 'hub' : run.inputMethod === 'manual' ? 'edit' : 'bolt'}</span>
-							</div>
-							<div class="min-w-0 flex-1">
-								<p class="text-grey-900 text-sm font-medium truncate group-hover:text-violet-700 transition-colors">{run.name}</p>
-								<p class="text-grey-400 text-[10px]">{run.found}/{run.contactsCount} found · {run.startedAt}</p>
-							</div>
-							{#if run.status === 'running'}
-								<div class="flex flex-col items-end gap-0.5 shrink-0">
-									<span class="material-icons-round text-violet-500 text-base animate-spin" style="animation-duration: 1.5s;">sync</span>
-									<div class="bg-grey-200 h-1.5 w-12 overflow-hidden rounded-full">
-										<div class="h-full rounded-full bg-gradient-to-r from-violet-400 to-violet-600 enrichment-bar" style:width="{run.progress}%"></div>
-									</div>
-									<span class="text-violet-600 text-[10px] font-bold">{run.progress}%</span>
-								</div>
-							{:else if run.status === 'completed'}
-								<span class="material-icons-round text-emerald-500 text-sm shrink-0">check_circle</span>
-							{:else}
-								<span class="material-icons-round text-grey-300 text-sm shrink-0">schedule</span>
-							{/if}
+							<span class="material-icons-round text-sm">auto_awesome</span>
+							Enrich {notEnrichedCount} remaining
 						</button>
-					{/each}
-					{#if v8ListRuns.length === 0}
-						<p class="text-grey-400 text-xs py-2">No enrichments yet</p>
 					{/if}
 				</div>
-			</div>
+
+				<!-- Data breakdown -->
+				<div class="border-b border-grey-100 px-5 py-5">
+					<div class="flex flex-col gap-2.5">
+						<div class="flex items-center justify-between text-xs">
+							<div class="flex items-center gap-1.5 text-grey-600">
+								<span class="material-icons-round text-sm text-pink-400">email</span>
+								With email
+							</div>
+							<span class="text-grey-900 font-medium">{withEmail}<span class="text-grey-400 font-normal">/{v8Contacts.length}</span></span>
+						</div>
+						<div class="flex items-center justify-between text-xs">
+							<div class="flex items-center gap-1.5 text-grey-600">
+								<span class="material-icons-round text-sm text-violet-400">phone</span>
+								With phone
+							</div>
+							<span class="text-grey-900 font-medium">{withPhone}<span class="text-grey-400 font-normal">/{v8Contacts.length}</span></span>
+						</div>
+					</div>
+				</div>
+
+				<!-- Enrichments on this list -->
+				<div class="px-5 py-5">
+					<div class="flex items-center justify-between mb-3">
+						<p class="text-grey-700 text-xs font-semibold uppercase tracking-wider">Enrichments on this list</p>
+						{#if v11ScopedRunId}
+							<button class="text-violet-600 hover:text-violet-700 text-xs font-medium" onclick={() => { v11ScopedRunId = null; }}>Clear</button>
+						{/if}
+					</div>
+					<div class="flex flex-col gap-1.5">
+						{#each v11ListRuns as run}
+							{@const intersectCount = run.contactIds.filter(cid => v8List?.memberIds.includes(cid)).length}
+							<button
+								class="flex items-center gap-2 rounded-lg px-3 py-2 text-left transition-all w-full
+									{v11ScopedRunId === run.id ? 'border-2 border-violet-400 bg-violet-50/50 shadow-sm' : 'border border-grey-200 hover:border-violet-300 hover:bg-grey-50'}"
+								onclick={() => { v11ScopedRunId = v11ScopedRunId === run.id ? null : run.id; }}
+							>
+								<span class="material-icons-round text-sm {v11ScopedRunId === run.id ? 'text-violet-600' : 'text-grey-400'}">{getSourceIcon(run.source, run.inputMethod)}</span>
+								<div class="min-w-0 flex-1">
+									<p class="text-grey-900 text-xs font-medium truncate">{getSourceLabel(run.source, run.inputMethod)} {run.name}</p>
+									<p class="text-grey-400 text-[10px]">{intersectCount} contacts · {run.startedAt}</p>
+								</div>
+								{#if v11ScopedRunId === run.id}
+									<span class="material-icons-round text-violet-500 text-xs">close</span>
+								{/if}
+							</button>
+						{/each}
+						{#if v11ListRuns.length === 0}
+							<p class="text-grey-400 text-xs py-2">No enrichments touch this list yet</p>
+						{/if}
+					</div>
+				</div>
+			{:else}
+				<div class="px-5 py-5">
+					<div class="flex items-center justify-between mb-3">
+						<p class="text-grey-700 text-xs font-semibold uppercase tracking-wider">Enrichments</p>
+						{#if v9SelectedRun}
+							<button class="text-violet-600 hover:text-violet-700 text-xs font-medium" onclick={() => { v9SelectedRun = null; }}>Show all</button>
+						{/if}
+					</div>
+					<div class="flex flex-col gap-0.5">
+						{#each v8ListRuns as run}
+							<button
+								class="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-left transition-all group
+									{v9SelectedRun === run.id ? 'border-2 border-violet-400 bg-violet-50/50 shadow-sm' : v9SelectedRun ? 'border border-transparent opacity-50 hover:opacity-80' : 'border border-transparent hover:bg-grey-50'}"
+								onclick={() => { v9SelectedRun = v9SelectedRun === run.id ? null : run.id; }}
+							>
+								<div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg {v9SelectedRun === run.id ? 'bg-violet-100' : 'bg-grey-100 group-hover:bg-violet-50'} transition-colors">
+									<span class="material-icons-round text-base {v9SelectedRun === run.id ? 'text-violet-600' : 'text-grey-500 group-hover:text-violet-600'} transition-colors">{run.inputMethod === 'csv' ? 'description' : run.inputMethod === 'search' ? 'search' : run.inputMethod === 'crm' ? 'hub' : run.inputMethod === 'manual' ? 'edit' : 'bolt'}</span>
+								</div>
+								<div class="min-w-0 flex-1">
+									<p class="text-grey-900 text-sm font-medium truncate group-hover:text-violet-700 transition-colors">{run.name}</p>
+									<p class="text-grey-400 text-[10px]">{run.found}/{run.contactsCount} found · {run.startedAt}</p>
+								</div>
+								{#if run.status === 'running'}
+									<div class="flex flex-col items-end gap-0.5 shrink-0">
+										<span class="material-icons-round text-violet-500 text-base animate-spin" style="animation-duration: 1.5s;">sync</span>
+										<div class="bg-grey-200 h-1.5 w-12 overflow-hidden rounded-full">
+											<div class="h-full rounded-full bg-gradient-to-r from-violet-400 to-violet-600 enrichment-bar" style:width="{run.progress}%"></div>
+										</div>
+										<span class="text-violet-600 text-[10px] font-bold">{run.progress}%</span>
+									</div>
+								{:else if run.status === 'completed'}
+									<span class="material-icons-round text-emerald-500 text-sm shrink-0">check_circle</span>
+								{:else}
+									<span class="material-icons-round text-grey-300 text-sm shrink-0">schedule</span>
+								{/if}
+							</button>
+						{/each}
+						{#if v8ListRuns.length === 0}
+							<p class="text-grey-400 text-xs py-2">No enrichments yet</p>
+						{/if}
+					</div>
+				</div>
+			{/if}
 		</div>
 		{/if}
 	</div>
 </div>
 
-{:else if (version === 'v9' || version === 'v10') && !v8List}
+{:else if (version === 'v9' || version === 'v10' || version === 'v11') && !v8List}
 <div class="flex h-full items-center justify-center">
 	<p class="text-grey-400 text-sm">List not found.</p>
 </div>

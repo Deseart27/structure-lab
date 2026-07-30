@@ -3,6 +3,8 @@
 export type EmailStatus = 'valid' | 'catch-all' | 'invalid-found' | 'not-found' | 'pending';
 export type JobSource = 'csv' | 'manual' | 'reverse' | 'crm' | 'search-batch' | 'search-inline';
 export type JobStatus = 'queued' | 'running' | 'completed' | 'completed-errors';
+export type CrmPushStatus = 'pushed' | 'not-pushed' | 'failed';
+export type EnrichSource = 'csv' | 'manual' | 'search' | 'reverse' | 'crm' | 'api' | 'mcp' | 'clay' | 'n8n' | 'make' | 'zapier';
 
 export interface Contact {
 	id: string;
@@ -17,6 +19,7 @@ export interface Contact {
 	linkedinUrl: string;
 	location: string;
 	hubspotSynced?: boolean;
+	crmPushStatus?: CrmPushStatus;
 }
 
 export interface Job {
@@ -74,26 +77,34 @@ export interface EnrichmentRun {
 	name: string;
 	outputType: 'emails' | 'phones' | 'reverse' | 'all';
 	inputMethod: 'csv' | 'manual' | 'crm' | 'list' | 'search';
+	source?: EnrichSource;
 	contactIds: string[];
 	contactsCount: number;
 	found: number;
-	status: 'running' | 'completed' | 'queued';
+	status: 'running' | 'completed' | 'queued' | 'completed-errors';
 	progress: number;
 	startedAt: string;
+	creditsSpent?: number;
+	launchedBy?: string;
+	requestedTypes?: ('email' | 'phone' | 'personal_email')[];
+	foundByType?: { email?: number; phone?: number; personal_email?: number };
+	emailBreakdown?: { valid: number; risky: number; invalid: number; notFound: number };
+	phoneBreakdown?: { found: number; notFound: number };
+	errorSummary?: string;
 }
 
 // --- Contacts pool ---
 
 const contactsPool: Contact[] = [
-	{ id: 'c1', firstName: 'Jean', lastName: 'Morel', company: 'Alan', title: 'Head of Sales', email: 'jean.morel@alan.com', emailStatus: 'valid', phone: '+33 6 12 34 56 78', personalEmail: '', linkedinUrl: 'linkedin.com/in/jeanmorel', location: 'Paris, France', hubspotSynced: true },
-	{ id: 'c2', firstName: 'Clara', lastName: 'Fontaine', company: 'Pennylane', title: 'VP Marketing', email: 'clara.f@pennylane.com', emailStatus: 'valid', phone: '+33 6 98 76 54 32', personalEmail: 'clara.fontaine@gmail.com', linkedinUrl: 'linkedin.com/in/clarafontaine', location: 'Paris, France', hubspotSynced: true },
-	{ id: 'c3', firstName: 'Marc', lastName: 'Dupont', company: 'Qonto', title: 'CRO', email: 'marc.dupont@qonto.com', emailStatus: 'catch-all', phone: '+33 7 11 22 33 44', personalEmail: '', linkedinUrl: 'linkedin.com/in/marcdupont', location: 'Paris, France' },
-	{ id: 'c4', firstName: 'Sophie', lastName: 'Laurent', company: 'Spendesk', title: 'Sales Director', email: 'sophie.l@spendesk.com', emailStatus: 'valid', phone: '+33 6 55 44 33 22', personalEmail: '', linkedinUrl: 'linkedin.com/in/sophielaurent', location: 'Paris, France' },
-	{ id: 'c5', firstName: 'Thomas', lastName: 'Bernard', company: 'PayFit', title: 'VP Sales', email: 'thomas.b@payfit.com', emailStatus: 'valid', phone: '+33 7 66 55 44 33', personalEmail: 'tbernard@outlook.fr', linkedinUrl: 'linkedin.com/in/thomasbernard', location: 'Paris, France', hubspotSynced: true },
-	{ id: 'c6', firstName: 'Lukas', lastName: 'Weber', company: 'Personio', title: 'Head of Sales DACH', email: 'lukas.weber@personio.de', emailStatus: 'valid', phone: '+49 170 123 4567', personalEmail: '', linkedinUrl: 'linkedin.com/in/lukasweber', location: 'Munich, Germany' },
+	{ id: 'c1', firstName: 'Jean', lastName: 'Morel', company: 'Alan', title: 'Head of Sales', email: 'jean.morel@alan.com', emailStatus: 'valid', phone: '+33 6 12 34 56 78', personalEmail: '', linkedinUrl: 'linkedin.com/in/jeanmorel', location: 'Paris, France', hubspotSynced: true, crmPushStatus: 'pushed' },
+	{ id: 'c2', firstName: 'Clara', lastName: 'Fontaine', company: 'Pennylane', title: 'VP Marketing', email: 'clara.f@pennylane.com', emailStatus: 'valid', phone: '+33 6 98 76 54 32', personalEmail: 'clara.fontaine@gmail.com', linkedinUrl: 'linkedin.com/in/clarafontaine', location: 'Paris, France', hubspotSynced: true, crmPushStatus: 'pushed' },
+	{ id: 'c3', firstName: 'Marc', lastName: 'Dupont', company: 'Qonto', title: 'CRO', email: '', emailStatus: 'not-found', phone: '', personalEmail: '', linkedinUrl: 'linkedin.com/in/marcdupont', location: 'Paris, France', crmPushStatus: 'not-pushed' },
+	{ id: 'c4', firstName: 'Sophie', lastName: 'Laurent', company: 'Spendesk', title: 'Sales Director', email: '', emailStatus: 'not-found', phone: '', personalEmail: '', linkedinUrl: 'linkedin.com/in/sophielaurent', location: 'Paris, France' },
+	{ id: 'c5', firstName: 'Thomas', lastName: 'Bernard', company: 'PayFit', title: 'VP Sales', email: 'thomas.b@payfit.com', emailStatus: 'valid', phone: '+33 7 66 55 44 33', personalEmail: 'tbernard@outlook.fr', linkedinUrl: 'linkedin.com/in/thomasbernard', location: 'Paris, France', hubspotSynced: true, crmPushStatus: 'pushed' },
+	{ id: 'c6', firstName: 'Lukas', lastName: 'Weber', company: 'Personio', title: 'Head of Sales DACH', email: '', emailStatus: 'not-found', phone: '', personalEmail: '', linkedinUrl: 'linkedin.com/in/lukasweber', location: 'Munich, Germany' },
 	{ id: 'c7', firstName: 'Anna', lastName: 'Schmidt', company: 'Celonis', title: 'VP Sales', email: 'anna.schmidt@celonis.com', emailStatus: 'valid', phone: '+49 171 234 5678', personalEmail: '', linkedinUrl: 'linkedin.com/in/annaschmidt', location: 'Munich, Germany', hubspotSynced: true },
-	{ id: 'c8', firstName: 'Felix', lastName: 'Braun', company: 'Forto', title: 'CRO', email: 'felix.braun@forto.com', emailStatus: 'invalid-found', phone: '', personalEmail: '', linkedinUrl: 'linkedin.com/in/felixbraun', location: 'Berlin, Germany' },
-	{ id: 'c9', firstName: 'Marie', lastName: 'Lefebvre', company: 'Doctolib', title: 'Sales Manager', email: 'marie.l@doctolib.com', emailStatus: 'valid', phone: '+33 6 77 88 99 00', personalEmail: '', linkedinUrl: 'linkedin.com/in/marielefebvre', location: 'Paris, France', hubspotSynced: true },
+	{ id: 'c8', firstName: 'Felix', lastName: 'Braun', company: 'Forto', title: 'CRO', email: 'felix.braun@forto.com', emailStatus: 'invalid-found', phone: '', personalEmail: '', linkedinUrl: 'linkedin.com/in/felixbraun', location: 'Berlin, Germany', crmPushStatus: 'failed' },
+	{ id: 'c9', firstName: 'Marie', lastName: 'Lefebvre', company: 'Doctolib', title: 'Sales Manager', email: 'marie.l@doctolib.com', emailStatus: 'valid', phone: '+33 6 77 88 99 00', personalEmail: '', linkedinUrl: 'linkedin.com/in/marielefebvre', location: 'Paris, France', hubspotSynced: true, crmPushStatus: 'pushed' },
 	{ id: 'c10', firstName: 'Hugo', lastName: 'Martin', company: 'Swile', title: 'Account Executive', email: 'hugo.m@swile.co', emailStatus: 'valid', phone: '+33 7 22 33 44 55', personalEmail: '', linkedinUrl: 'linkedin.com/in/hugomartin', location: 'Montpellier, France' },
 	{ id: 'c11', firstName: 'Elena', lastName: 'Rossi', company: 'Scalapay', title: 'VP Sales', email: '', emailStatus: 'not-found', phone: '', personalEmail: '', linkedinUrl: 'linkedin.com/in/elenarossi', location: 'Milan, Italy' },
 	{ id: 'c12', firstName: 'Pablo', lastName: 'Garcia', company: 'Factorial', title: 'Head of Revenue', email: 'pablo.g@factorial.co', emailStatus: 'valid', phone: '+34 612 345 678', personalEmail: '', linkedinUrl: 'linkedin.com/in/pablogarcia', location: 'Barcelona, Spain' },
@@ -167,13 +178,17 @@ let companies = $state<Company[]>([
 // --- Enrichment Runs ---
 
 let runs = $state<EnrichmentRun[]>([
-	{ id: 'r1', listId: 'l1', listName: 'Q3 Targets', name: 'Q3 Targets — email enrichment', outputType: 'emails', inputMethod: 'csv', contactIds: ['c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c9'], contactsCount: 234, found: 198, status: 'completed', progress: 100, startedAt: '2 hours ago' },
-	{ id: 'r2', listId: 'l4', listName: 'Sales Leaders DACH', name: 'Sales Leaders DACH — phones', outputType: 'phones', inputMethod: 'search', contactIds: ['c6', 'c7', 'c8', 'c15'], contactsCount: 45, found: 21, status: 'running', progress: 64, startedAt: '12 min ago' },
-	{ id: 'r3', listId: 'l1', listName: 'Q3 Targets', name: 'Q3 Targets — full enrichment', outputType: 'all', inputMethod: 'csv', contactIds: ['c1', 'c2', 'c3', 'c4', 'c5', 'c9'], contactsCount: 156, found: 72, status: 'completed', progress: 100, startedAt: '1 day ago' },
-	{ id: 'r4', name: 'Reverse — webinar signups', outputType: 'reverse', inputMethod: 'csv', contactIds: ['c16', 'c17', 'c18'], contactsCount: 67, found: 52, status: 'completed', progress: 100, startedAt: '2 days ago' },
-	{ id: 'r5', listId: 'l4', listName: 'Sales Leaders DACH', name: 'Sales Leaders DACH — emails', outputType: 'emails', inputMethod: 'manual', contactIds: ['c6', 'c7', 'c8', 'c15'], contactsCount: 12, found: 0, status: 'queued', progress: 0, startedAt: '5 min ago' },
-	{ id: 'r6', name: 'VP Sales · SaaS · France', outputType: 'emails', inputMethod: 'search', contactIds: ['c1', 'c3', 'c4'], contactsCount: 3, found: 3, status: 'completed', progress: 100, startedAt: '3 hours ago' },
-	{ id: 'r7', name: 'leads_q3.csv', outputType: 'all', inputMethod: 'csv', contactIds: ['c1', 'c2', 'c3', 'c4', 'c5', 'c9', 'c10', 'c11', 'c12', 'c13', 'c14', 'c15'], contactsCount: 12, found: 10, status: 'completed', progress: 100, startedAt: '2 hours ago' },
+	{ id: 'r1', listId: 'l1', listName: 'Q3 Targets', name: 'Q3 Targets — email enrichment', outputType: 'emails', inputMethod: 'csv', source: 'csv', contactIds: ['c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c9'], contactsCount: 234, found: 198, status: 'completed', progress: 100, startedAt: '2 hours ago', creditsSpent: 234, launchedBy: 'Francis', requestedTypes: ['email'], foundByType: { email: 198 }, emailBreakdown: { valid: 156, risky: 24, invalid: 18, notFound: 36 } },
+	{ id: 'r2', listId: 'l4', listName: 'Sales Leaders DACH', name: 'Sales Leaders DACH — phones', outputType: 'phones', inputMethod: 'search', source: 'search', contactIds: ['c6', 'c7', 'c8', 'c15'], contactsCount: 45, found: 21, status: 'running', progress: 64, startedAt: '12 min ago', creditsSpent: 45, launchedBy: 'Francis', requestedTypes: ['phone'], foundByType: { phone: 21 }, phoneBreakdown: { found: 21, notFound: 8 } },
+	{ id: 'r3', listId: 'l1', listName: 'Q3 Targets', name: 'Q3 Targets — full enrichment', outputType: 'all', inputMethod: 'csv', source: 'csv', contactIds: ['c1', 'c2', 'c3', 'c4', 'c5', 'c9'], contactsCount: 156, found: 72, status: 'completed', progress: 100, startedAt: '1 day ago', creditsSpent: 312, launchedBy: 'Francis', requestedTypes: ['email', 'phone'], foundByType: { email: 72, phone: 41 }, emailBreakdown: { valid: 58, risky: 8, invalid: 6, notFound: 84 }, phoneBreakdown: { found: 41, notFound: 115 } },
+	{ id: 'r4', name: 'Reverse — webinar signups', outputType: 'reverse', inputMethod: 'csv', source: 'reverse', contactIds: ['c16', 'c17', 'c18'], contactsCount: 67, found: 52, status: 'completed', progress: 100, startedAt: '2 days ago', creditsSpent: 67, launchedBy: 'Francis', requestedTypes: ['email', 'phone', 'personal_email'], foundByType: { email: 52, phone: 38, personal_email: 12 }, emailBreakdown: { valid: 41, risky: 7, invalid: 4, notFound: 15 }, phoneBreakdown: { found: 38, notFound: 29 } },
+	{ id: 'r5', listId: 'l4', listName: 'Sales Leaders DACH', name: 'Sales Leaders DACH — emails', outputType: 'emails', inputMethod: 'manual', source: 'manual', contactIds: ['c6', 'c7', 'c8', 'c15'], contactsCount: 12, found: 0, status: 'queued', progress: 0, startedAt: '5 min ago', creditsSpent: 0, launchedBy: 'Francis', requestedTypes: ['email'] },
+	{ id: 'r6', name: 'VP Sales · SaaS · France', outputType: 'emails', inputMethod: 'search', source: 'search', contactIds: ['c10', 'c12', 'c14'], contactsCount: 3, found: 3, status: 'completed', progress: 100, startedAt: '3 hours ago', creditsSpent: 3, launchedBy: 'Francis', requestedTypes: ['email'], foundByType: { email: 3 } },
+	{ id: 'r7', name: 'leads_q3.csv', outputType: 'all', inputMethod: 'csv', source: 'csv', contactIds: ['c10', 'c11', 'c12', 'c13', 'c14', 'c16'], contactsCount: 12, found: 10, status: 'completed', progress: 100, startedAt: '2 hours ago', creditsSpent: 24, launchedBy: 'Francis', requestedTypes: ['email', 'phone'], foundByType: { email: 10, phone: 7 }, emailBreakdown: { valid: 8, risky: 1, invalid: 1, notFound: 2 }, phoneBreakdown: { found: 7, notFound: 5 } },
+	{ id: 'r8', name: 'API — nightly CRM sync', outputType: 'emails', inputMethod: 'csv', source: 'api', contactIds: ['c12', 'c13', 'c17'], contactsCount: 89, found: 76, status: 'completed', progress: 100, startedAt: '6 hours ago', creditsSpent: 89, launchedBy: 'API key: prod_****3f2a', requestedTypes: ['email'], foundByType: { email: 76 }, emailBreakdown: { valid: 62, risky: 9, invalid: 5, notFound: 13 } },
+	{ id: 'r9', name: 'MCP — Claude enrichment', outputType: 'all', inputMethod: 'csv', source: 'mcp', contactIds: ['c13', 'c14', 'c16'], contactsCount: 15, found: 14, status: 'completed', progress: 100, startedAt: '1 day ago', creditsSpent: 30, launchedBy: 'MCP: Claude Desktop', requestedTypes: ['email', 'phone'], foundByType: { email: 14, phone: 9 } },
+	{ id: 'r10', name: 'Clay — Outbound sequence', outputType: 'emails', inputMethod: 'csv', source: 'clay', contactIds: ['c10', 'c11', 'c17', 'c18'], contactsCount: 142, found: 118, status: 'completed-errors', progress: 100, startedAt: '3 days ago', creditsSpent: 142, launchedBy: 'Clay workflow', requestedTypes: ['email', 'phone'], foundByType: { email: 118, phone: 87 }, errorSummary: '3 contacts failed: invalid LinkedIn URLs' },
+	{ id: 'r11', name: 'HubSpot — Cold leads 2025', outputType: 'emails', inputMethod: 'crm', source: 'crm', contactIds: ['c8', 'c17', 'c18'], contactsCount: 50, found: 41, status: 'completed-errors', progress: 100, startedAt: '3 days ago', creditsSpent: 50, launchedBy: 'Francis', requestedTypes: ['email'], foundByType: { email: 41 }, errorSummary: '2 contacts: email provider blocked' },
 ]);
 
 // --- Pushes ---
@@ -184,6 +199,25 @@ let pushes = $state<Push[]>([
 	{ id: 'p3', date: '3 days ago', source: 'List', sourceName: 'Q3 Targets', contactsCount: 7, status: 'completed' },
 	{ id: 'p4', date: '1 week ago', source: 'Job', sourceName: 'HubSpot - Cold leads 2025', contactsCount: 3, status: 'failed' },
 ]);
+
+// --- Source helpers ---
+export function getSourceLabel(source?: EnrichSource, inputMethod?: string): string {
+	if (source) {
+		const map: Record<EnrichSource, string> = { csv: 'CSV', manual: 'Manual', search: 'Search', reverse: 'Reverse', crm: 'CRM', api: 'API', mcp: 'MCP', clay: 'Clay', n8n: 'n8n', make: 'Make', zapier: 'Zapier' };
+		return map[source] || source;
+	}
+	if (inputMethod) {
+		const map: Record<string, string> = { csv: 'CSV', manual: 'Manual', search: 'Search', crm: 'CRM', list: 'List' };
+		return map[inputMethod] || inputMethod;
+	}
+	return 'Unknown';
+}
+
+export function getSourceIcon(source?: EnrichSource, inputMethod?: string): string {
+	const s = source || inputMethod;
+	const map: Record<string, string> = { csv: 'description', manual: 'edit', search: 'search', reverse: 'swap_horiz', crm: 'hub', api: 'api', mcp: 'smart_toy', clay: 'layers', n8n: 'account_tree', make: 'settings_suggest', zapier: 'bolt', list: 'list' };
+	return map[s || ''] || 'bolt';
+}
 
 // --- Store export ---
 
@@ -233,6 +267,12 @@ export const v6Store = {
 		return runs.find(r => r.listId === listId);
 	},
 	getRun(id: string): EnrichmentRun | undefined { return runs.find(r => r.id === id); },
+	getRunsIntersectingList(listId: string): EnrichmentRun[] {
+		const list = lists.find(l => l.id === listId);
+		if (!list) return [];
+		return runs.filter(r => r.contactIds.some(cid => list.memberIds.includes(cid)));
+	},
+	getRunningCount(): number { return runs.filter(r => r.status === 'running').length; },
 	getContactsForRun(run: EnrichmentRun): Contact[] {
 		return run.contactIds.map(id => contactsPool.find(c => c.id === id)).filter(Boolean) as Contact[];
 	},

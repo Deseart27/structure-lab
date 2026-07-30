@@ -14,7 +14,7 @@
 	}
 
 	let navItems = $derived<NavItem[]>(
-		version === 'v10'
+		version === 'v10' || version === 'v11'
 			? [
 					{ label: 'Search', href: `${base}/app/search`, match: '/search' },
 					{ label: 'Contacts', href: `${base}/app/prospects`, match: '/prospects', matchExclude: '/prospects/companies' },
@@ -102,7 +102,7 @@
 		</div>
 	{/each}
 
-	{#if version === 'v10'}
+	{#if version === 'v10' || version === 'v11'}
 		<a
 			href="{base}/app/enrich"
 			class="ml-1 flex h-8 shrink-0 items-center gap-1.5 rounded-lg bg-violet-700 px-3.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-violet-800 hover:shadow-md"

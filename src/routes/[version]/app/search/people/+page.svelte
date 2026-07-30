@@ -210,7 +210,7 @@
 					<span class="material-icons-round text-sm text-white">auto_awesome</span>
 					Enrich
 				</button>
-			{:else if version === 'v6' || version === 'v7' || version === 'v8' || version === 'v9' || version === 'v10'}
+			{:else if version === 'v6' || version === 'v7' || version === 'v8' || version === 'v9' || version === 'v10' || version === 'v11'}
 				{#if v6Selected.size > 0}
 					<span class="text-grey-500 mr-1 text-sm">{v6Selected.size} selected</span>
 				{/if}
@@ -312,7 +312,7 @@
 		</div>
 	</div>
 
-	{#if version === 'v6' || version === 'v7' || version === 'v8' || version === 'v9' || version === 'v10'}
+	{#if version === 'v6' || version === 'v7' || version === 'v8' || version === 'v9' || version === 'v10' || version === 'v11'}
 		<!-- V6/V7 search query chip -->
 		<div class="border-grey-100 flex shrink-0 items-center gap-2 border-b px-6 py-2.5">
 			<span class="text-grey-500 text-xs font-semibold uppercase tracking-wider">Search</span>
@@ -397,12 +397,12 @@
 									<div class="relative">
 										<button
 											class="flex h-7 items-center gap-1 rounded-lg border border-grey-200 bg-white px-2 text-xs font-medium text-grey-600 shadow-sm transition-colors hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700"
-											onclick={() => { if (version === 'v9' || version === 'v10') { v9EnrichPopover = { index: i, type: 'email' }; v9EnrichList = 'none'; } else { v6EnrichRow(i); } }}
+											onclick={() => { if (version === 'v9' || version === 'v10' || version === 'v11') { v9EnrichPopover = { index: i, type: 'email' }; v9EnrichList = 'none'; } else { v6EnrichRow(i); } }}
 										>
 											<span class="material-icons-round text-sm">mail</span>
 											Find email
 										</button>
-										{#if (version === 'v9' || version === 'v10') && v9EnrichPopover?.index === i && v9EnrichPopover?.type === 'email'}
+										{#if (version === 'v9' || version === 'v10' || version === 'v11') && v9EnrichPopover?.index === i && v9EnrichPopover?.type === 'email'}
 											<button class="fixed inset-0 z-30" onclick={() => { v9EnrichPopover = null; }} aria-label="Close"></button>
 											<div class="absolute left-0 top-full z-40 mt-1 w-64 rounded-xl border border-grey-200 bg-white p-4 shadow-xl">
 												<div class="mb-3 flex items-center gap-2">
@@ -456,12 +456,12 @@
 									<div class="relative">
 										<button
 											class="flex h-7 items-center gap-1 rounded-lg border border-grey-200 bg-white px-2 text-xs font-medium text-grey-600 shadow-sm transition-colors hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700"
-											onclick={() => { if (version === 'v9' || version === 'v10') { v9EnrichPopover = { index: i, type: 'phone' }; v9EnrichList = 'none'; } else { v6EnrichRow(i); } }}
+											onclick={() => { if (version === 'v9' || version === 'v10' || version === 'v11') { v9EnrichPopover = { index: i, type: 'phone' }; v9EnrichList = 'none'; } else { v6EnrichRow(i); } }}
 										>
 											<span class="material-icons-round text-sm">phone</span>
 											Find phone
 										</button>
-										{#if (version === 'v9' || version === 'v10') && v9EnrichPopover?.index === i && v9EnrichPopover?.type === 'phone'}
+										{#if (version === 'v9' || version === 'v10' || version === 'v11') && v9EnrichPopover?.index === i && v9EnrichPopover?.type === 'phone'}
 											<button class="fixed inset-0 z-30" onclick={() => { v9EnrichPopover = null; }} aria-label="Close"></button>
 											<div class="absolute left-0 top-full z-40 mt-1 w-64 rounded-xl border border-grey-200 bg-white p-4 shadow-xl">
 												<div class="mb-3 flex items-center gap-2">
@@ -583,7 +583,7 @@
 					</div>
 
 					<!-- Add to list + Cost -->
-					{#if version === 'v9' || version === 'v10'}
+					{#if version === 'v9' || version === 'v10' || version === 'v11'}
 						<p class="text-grey-500 mb-2 text-xs font-semibold uppercase tracking-wider">Add to a list <span class="font-normal normal-case text-grey-400">(optional)</span></p>
 						<select
 							bind:value={v6ModalList}

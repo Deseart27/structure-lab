@@ -636,17 +636,43 @@
 					<span class="text-xs text-grey-500">Queued</span>
 				</div>
 			{/if}
-			<div class="ml-auto flex items-center gap-3">
-				{#if run.requestedTypes}
-					{#each run.requestedTypes as dt}
-						<div class="flex items-center gap-1 rounded-full bg-white border border-grey-200 px-2 py-0.5 text-[10px] font-medium text-grey-600">
-							<span class="material-icons-round text-[10px]">{dt === 'email' ? 'email' : dt === 'phone' ? 'phone' : 'alternate_email'}</span>
-							{dt === 'email' ? 'Email' : dt === 'phone' ? 'Phone' : 'Personal email'}:
-							<span class="font-bold text-grey-900">{run.foundByType?.[dt] ?? 0}</span>
-						</div>
-					{/each}
-				{/if}
 			</div>
+
+		<!-- Enrichment results -->
+		<div class="mt-3 flex items-center gap-6">
+			<div class="flex items-center gap-1.5 text-xs">
+				<span class="text-grey-400">Contacts</span>
+				<span class="text-grey-900 font-semibold">{run.contactsCount}</span>
+			</div>
+			<div class="flex items-center gap-1.5 text-xs">
+				<span class="text-grey-400">Found</span>
+				<span class="text-grey-900 font-semibold">{run.found}<span class="text-grey-400 font-normal">/{run.contactsCount}</span></span>
+			</div>
+			{#if run.foundByType?.email != null}
+				<div class="flex items-center gap-1 text-xs">
+					<span class="material-icons-round text-pink-400 text-sm">email</span>
+					<span class="text-grey-900 font-semibold">{run.foundByType.email}</span>
+				</div>
+			{/if}
+			{#if run.foundByType?.phone != null}
+				<div class="flex items-center gap-1 text-xs">
+					<span class="material-icons-round text-violet-400 text-sm">phone</span>
+					<span class="text-grey-900 font-semibold">{run.foundByType.phone}</span>
+				</div>
+			{/if}
+			{#if run.foundByType?.personal_email != null}
+				<div class="flex items-center gap-1 text-xs">
+					<span class="material-icons-round text-blue-400 text-sm">alternate_email</span>
+					<span class="text-grey-900 font-semibold">{run.foundByType.personal_email}</span>
+				</div>
+			{/if}
+			{#if run.creditsSpent}
+				<div class="flex items-center gap-1 text-xs">
+					<span class="material-icons-round text-amber-400 text-sm">stars</span>
+					<span class="text-grey-900 font-semibold">{run.creditsSpent}</span>
+					<span class="text-grey-400">credits</span>
+				</div>
+			{/if}
 		</div>
 	</div>
 

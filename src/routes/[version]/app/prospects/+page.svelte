@@ -65,10 +65,13 @@
 
 	// V9 state
 	let enrichmentFilter = $derived($page.url.searchParams.get('enrichment'));
-	let activeRun = $derived(enrichmentFilter ? v6Store.getRun(enrichmentFilter) : null);
+	// V11: support multi-enrichment selection (comma-separated IDs)
+	let activeRunIds = $derived(enrichmentFilter ? enrichmentFilter.split(',').filter(Boolean) : []);
+	let activeRuns = $derived(activeRunIds.map(id => v6Store.getRun(id)).filter(Boolean) as typeof v6Store.runs);
+	let activeRun = $derived(activeRuns.length === 1 ? activeRuns[0] : activeRuns.length > 0 ? activeRuns[0] : enrichmentFilter ? v6Store.getRun(enrichmentFilter) : null);
 
-	// V10: collapsible right panel — open by default when coming from enrichment
-	let v10PanelOpen = $state(false);
+	// V10: collapsible right panel — V11: open by default
+	let v10PanelOpen = $state($page.params.version === 'v11');
 	let v10PrevEnrichment = $state<string | null>(null);
 	$effect(() => {
 		if (enrichmentFilter && enrichmentFilter !== v10PrevEnrichment) {
@@ -103,7 +106,7 @@
 	import type { EmailStatus } from '$lib/mock/v6.svelte';
 
 	// V11: filter panel state
-	let v11FilterOpen = $state(true);
+	let v11FilterOpen = $state(false);
 	let v11FilterDataState = $state<'all' | 'enriched' | 'not-enriched'>('all');
 	let v11FilterHasEmail = $state(false);
 	let v11FilterHasPhone = $state(false);
@@ -114,7 +117,9 @@
 
 	let v11FilteredContacts = $derived(() => {
 		if (version !== 'v11') return v9FilteredContacts;
-		let contacts = activeRun ? v6Store.getContactsForRun(activeRun) : [...v6Store.contacts];
+		let contacts = activeRuns.length > 0
+			? [...new Map(activeRuns.flatMap(r => v6Store.getContactsForRun(r)).map(c => [c.id, c])).values()]
+			: [...v6Store.contacts];
 		if (v11FilterDataState === 'enriched') contacts = contacts.filter(c => c.email || c.phone);
 		if (v11FilterDataState === 'not-enriched') contacts = contacts.filter(c => !c.email && !c.phone);
 		if (v11FilterHasEmail) contacts = contacts.filter(c => !!c.email);
@@ -868,21 +873,158 @@
 		</div>
 	</div>
 
-	<!-- Enrichment filter banner -->
-	{#if activeRun}
-		<div class="border-grey-200 flex items-center gap-3 border-b bg-violet-50/50 px-6 py-2">
-			<span class="material-icons-round text-sm text-violet-500">filter_alt</span>
-			<span class="text-sm text-violet-700">
-				Filtered by enrichment: <span class="font-medium">{activeRun.name}</span>
-				<span class="text-violet-400">· {activeRun.contactsCount} contacts · {activeRun.startedAt}</span>
-			</span>
-			<a
-				href="{base}/app/prospects?view=contacts"
-				class="ml-auto inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium text-violet-600 hover:bg-violet-100 transition-colors"
-			>
-				<span class="material-icons-round text-xs">close</span>
-				Clear
-			</a>
+	<!-- Enrichment filter banner with stats -->
+	{#if activeRuns.length > 0}
+		{@const mergedEmail = activeRuns.reduce((acc, r) => {
+			if (r.emailBreakdown) {
+				acc.valid += r.emailBreakdown.valid;
+				acc.risky += r.emailBreakdown.risky;
+				acc.invalid += r.emailBreakdown.invalid;
+				acc.notFound += r.emailBreakdown.notFound;
+				acc.hasData = true;
+			}
+			return acc;
+		}, { valid: 0, risky: 0, invalid: 0, notFound: 0, hasData: false })}
+		{@const mergedPhone = activeRuns.reduce((acc, r) => {
+			if (r.phoneBreakdown) {
+				acc.found += r.phoneBreakdown.found;
+				acc.notFound += r.phoneBreakdown.notFound;
+				acc.hasData = true;
+			}
+			return acc;
+		}, { found: 0, notFound: 0, hasData: false })}
+		{@const mergedCredits = activeRuns.reduce((s, r) => s + (r.creditsSpent || 0), 0)}
+		{@const mergedContacts = activeRuns.reduce((s, r) => s + r.contactsCount, 0)}
+		<div class="border-grey-200 shrink-0 border-b bg-violet-50/30 px-6 py-3">
+			<!-- Running status bar if any selected run is running -->
+			{#if activeRuns.some(r => r.status === 'running')}
+				{@const runningRun = activeRuns.find(r => r.status === 'running')}
+				{#if runningRun}
+					<div class="flex items-center gap-2 mb-2">
+						<div class="bg-grey-200 h-1.5 flex-1 max-w-xs overflow-hidden rounded-full">
+							<div class="h-full rounded-full bg-gradient-to-r from-violet-400 to-violet-600" style:width="{runningRun.progress}%"></div>
+						</div>
+						<span class="text-violet-600 text-xs font-bold">{runningRun.progress}%</span>
+						<span class="text-grey-400 text-xs">· Running in the background</span>
+					</div>
+				{/if}
+			{/if}
+
+			<div class="flex items-center gap-6">
+				<!-- Col 1: Enrichment info -->
+				<div class="flex items-center gap-3 min-w-0 flex-1">
+					<span class="material-icons-round text-sm text-violet-500">filter_alt</span>
+					<div class="min-w-0">
+						{#if activeRuns.length === 1}
+							{@const run = activeRuns[0]}
+							<div class="flex items-center gap-2">
+								<span class="text-sm font-semibold text-violet-800">{run.name}</span>
+								<span class="shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-medium {run.source === 'api' || run.source === 'mcp' ? 'border-blue-200 bg-blue-50 text-blue-600' : run.source === 'clay' || run.source === 'n8n' || run.source === 'make' || run.source === 'zapier' ? 'border-amber-200 bg-amber-50 text-amber-700' : 'border-grey-200 text-grey-500'}">{getSourceLabel(run.source, run.inputMethod)}</span>
+								{#if run.status === 'completed'}
+									<span class="material-icons-round text-emerald-500 text-sm">check_circle</span>
+								{:else if run.status === 'completed-errors'}
+									<span class="material-icons-round text-amber-500 text-sm">warning</span>
+								{/if}
+							</div>
+							<div class="flex items-center gap-3 mt-0.5 text-xs text-violet-400">
+								<span>{run.contactsCount} contacts</span>
+								<span>{run.startedAt}</span>
+								{#if run.launchedBy}<span>by {run.launchedBy}</span>{/if}
+							</div>
+						{:else}
+							<div class="flex items-center gap-2">
+								<span class="text-sm font-semibold text-violet-800">{activeRuns.length} enrichments selected</span>
+							</div>
+							<div class="flex items-center gap-2 mt-0.5 text-xs text-violet-400">
+								<span>{mergedContacts} contacts total</span>
+								<span>·</span>
+								<span class="flex items-center gap-1 flex-wrap">{activeRuns.map(r => r.name).join(', ')}</span>
+							</div>
+						{/if}
+					</div>
+				</div>
+
+				<!-- Col 2: Stats (donut charts) -->
+				<div class="flex items-center gap-6 shrink-0">
+					{#if mergedEmail.hasData}
+						{@const eTotal = mergedEmail.valid + mergedEmail.risky + mergedEmail.invalid + mergedEmail.notFound}
+						{#if eTotal > 0}
+							{@const eValidPct = mergedEmail.valid / eTotal * 100}
+							{@const eRiskyPct = mergedEmail.risky / eTotal * 100}
+							{@const eInvalidPct = mergedEmail.invalid / eTotal * 100}
+							<div class="flex items-center gap-3">
+								<svg viewBox="0 0 36 36" class="h-14 w-14 shrink-0">
+									<circle cx="18" cy="18" r="15.915" fill="none" stroke="#e5e7eb" stroke-width="3" />
+									<circle cx="18" cy="18" r="15.915" fill="none" stroke="#10b981" stroke-width="3"
+										stroke-dasharray="{eValidPct} {100 - eValidPct}" stroke-dashoffset="25" stroke-linecap="round" />
+									<circle cx="18" cy="18" r="15.915" fill="none" stroke="#fbbf24" stroke-width="3"
+										stroke-dasharray="{eRiskyPct} {100 - eRiskyPct}" stroke-dashoffset="{25 - eValidPct}" stroke-linecap="round" />
+									<circle cx="18" cy="18" r="15.915" fill="none" stroke="#f87171" stroke-width="3"
+										stroke-dasharray="{eInvalidPct} {100 - eInvalidPct}" stroke-dashoffset="{25 - eValidPct - eRiskyPct}" stroke-linecap="round" />
+									<text x="18" y="17" text-anchor="middle" dominant-baseline="middle" class="fill-grey-900 text-[7px] font-bold">{mergedEmail.valid + mergedEmail.risky}</text>
+									<text x="18" y="22" text-anchor="middle" dominant-baseline="middle" class="fill-grey-400 text-[4px]">email</text>
+								</svg>
+								<div class="flex flex-col gap-0.5 text-[10px]">
+									<p class="text-grey-500 text-[10px] font-semibold uppercase tracking-wider mb-0.5">Email</p>
+									<span class="flex items-center gap-1"><span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span><span class="text-grey-500">Valid</span><span class="text-grey-900 font-medium ml-auto">{mergedEmail.valid}</span></span>
+									<span class="flex items-center gap-1"><span class="h-1.5 w-1.5 rounded-full bg-amber-400"></span><span class="text-grey-500">Risky</span><span class="text-grey-900 font-medium ml-auto">{mergedEmail.risky}</span></span>
+									<span class="flex items-center gap-1"><span class="h-1.5 w-1.5 rounded-full bg-red-400"></span><span class="text-grey-500">Invalid</span><span class="text-grey-900 font-medium ml-auto">{mergedEmail.invalid}</span></span>
+									<span class="flex items-center gap-1"><span class="h-1.5 w-1.5 rounded-full bg-grey-300"></span><span class="text-grey-500">Not found</span><span class="text-grey-900 font-medium ml-auto">{mergedEmail.notFound}</span></span>
+								</div>
+							</div>
+						{/if}
+					{/if}
+					{#if mergedPhone.hasData}
+						{@const pTotal = mergedPhone.found + mergedPhone.notFound}
+						{#if pTotal > 0}
+							{@const pFoundPct = mergedPhone.found / pTotal * 100}
+							<div class="flex items-center gap-3">
+								<svg viewBox="0 0 36 36" class="h-14 w-14 shrink-0">
+									<circle cx="18" cy="18" r="15.915" fill="none" stroke="#e5e7eb" stroke-width="3" />
+									<circle cx="18" cy="18" r="15.915" fill="none" stroke="#3b82f6" stroke-width="3"
+										stroke-dasharray="{pFoundPct} {100 - pFoundPct}" stroke-dashoffset="25" stroke-linecap="round" />
+									<text x="18" y="17" text-anchor="middle" dominant-baseline="middle" class="fill-grey-900 text-[7px] font-bold">{mergedPhone.found}</text>
+									<text x="18" y="22" text-anchor="middle" dominant-baseline="middle" class="fill-grey-400 text-[4px]">phone</text>
+								</svg>
+								<div class="flex flex-col gap-0.5 text-[10px]">
+									<p class="text-grey-500 text-[10px] font-semibold uppercase tracking-wider mb-0.5">Phone</p>
+									<span class="flex items-center gap-1"><span class="h-1.5 w-1.5 rounded-full bg-blue-500"></span><span class="text-grey-500">Found</span><span class="text-grey-900 font-medium ml-auto">{mergedPhone.found}</span></span>
+									<span class="flex items-center gap-1"><span class="h-1.5 w-1.5 rounded-full bg-grey-300"></span><span class="text-grey-500">Not found</span><span class="text-grey-900 font-medium ml-auto">{mergedPhone.notFound}</span></span>
+								</div>
+							</div>
+						{/if}
+					{/if}
+					{#if mergedCredits > 0}
+						<div class="flex flex-col items-center justify-center">
+							<p class="text-grey-500 text-[10px] font-semibold uppercase tracking-wider mb-1">Credits</p>
+							<div class="flex items-center gap-1">
+								<span class="material-icons-round text-amber-400 text-base">stars</span>
+								<span class="text-grey-900 text-sm font-semibold">{mergedCredits}</span>
+							</div>
+						</div>
+					{/if}
+				</div>
+
+				<!-- Col 3: Actions + Clear -->
+				<div class="flex items-center gap-2 shrink-0">
+					<button class="flex items-center gap-1 rounded-lg border border-grey-200 bg-white px-2.5 py-1.5 text-xs font-medium text-grey-700 shadow-sm transition-colors hover:bg-grey-50">
+						<span class="material-icons-round text-sm">download</span> Download
+					</button>
+					<button class="flex items-center gap-1 rounded-lg border border-grey-200 bg-white px-2.5 py-1.5 text-xs font-medium text-grey-700 shadow-sm transition-colors hover:bg-grey-50">
+						<span class="material-icons-round text-sm">cloud_upload</span> Push to CRM
+					</button>
+					<button class="flex items-center gap-1 rounded-lg border border-grey-200 bg-white px-2.5 py-1.5 text-xs font-medium text-grey-700 shadow-sm transition-colors hover:bg-grey-50">
+						<span class="material-icons-round text-sm">playlist_add</span> Add to list
+					</button>
+					<a
+						href="{base}/app/prospects?view=contacts"
+						class="flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-violet-600 hover:bg-violet-100 transition-colors"
+					>
+						<span class="material-icons-round text-xs">close</span>
+						Clear
+					</a>
+				</div>
+			</div>
 		</div>
 	{/if}
 
@@ -999,19 +1141,29 @@
 		<div class="border-grey-200 w-72 border-l bg-white overflow-y-auto">
 			<div class="flex items-center justify-between px-5 pt-5 pb-3">
 				<p class="text-grey-700 text-xs font-semibold uppercase tracking-wider">Enrichments</p>
-				{#if activeRun}
-					<a href="{base}/app/prospects?view=contacts" class="text-violet-600 hover:text-violet-700 text-xs font-medium">Clear filter</a>
+				{#if activeRuns.length > 0}
+					<a href="{base}/app/prospects?view=contacts" class="text-violet-600 hover:text-violet-700 text-xs font-medium">Clear{activeRuns.length > 1 ? ` (${activeRuns.length})` : ''}</a>
 				{/if}
 			</div>
 			<div class="flex flex-col gap-0.5 px-3 pb-4">
 				{#each v6Store.runs as run}
+					{@const isSelected = activeRunIds.includes(run.id)}
+					{@const toggleUrl = (() => {
+						if (isSelected) {
+							const remaining = activeRunIds.filter(id => id !== run.id);
+							return remaining.length > 0 ? `${base}/app/prospects?view=contacts&enrichment=${remaining.join(',')}` : `${base}/app/prospects?view=contacts`;
+						} else {
+							const next = [...activeRunIds, run.id];
+							return `${base}/app/prospects?view=contacts&enrichment=${next.join(',')}`;
+						}
+					})()}
 					<a
-						href="{base}/app/prospects?view=contacts&enrichment={run.id}"
+						href={toggleUrl}
 						class="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-left transition-all group
-							{activeRun?.id === run.id ? 'border-2 border-violet-400 bg-violet-50/50 shadow-sm' : activeRun ? 'border border-transparent opacity-50 hover:opacity-80' : 'border border-transparent hover:bg-grey-50'}"
+							{isSelected ? 'border-2 border-violet-400 bg-violet-50/50 shadow-sm' : activeRuns.length > 0 ? 'border border-transparent opacity-50 hover:opacity-80' : 'border border-transparent hover:bg-grey-50'}"
 					>
-						<div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg {activeRun?.id === run.id ? 'bg-violet-100' : 'bg-grey-100 group-hover:bg-violet-50'} transition-colors">
-							<span class="material-icons-round text-base {activeRun?.id === run.id ? 'text-violet-600' : 'text-grey-500 group-hover:text-violet-600'} transition-colors">{getSourceIcon(run.source, run.inputMethod)}</span>
+						<div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg {isSelected ? 'bg-violet-100' : 'bg-grey-100 group-hover:bg-violet-50'} transition-colors">
+							<span class="material-icons-round text-base {isSelected ? 'text-violet-600' : 'text-grey-500 group-hover:text-violet-600'} transition-colors">{getSourceIcon(run.source, run.inputMethod)}</span>
 						</div>
 						<div class="min-w-0 flex-1">
 							<p class="text-grey-900 text-sm font-medium truncate group-hover:text-violet-700 transition-colors">{run.name}</p>

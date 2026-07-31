@@ -44,7 +44,7 @@
 	let v11IsAllContacts = $derived($page.url.searchParams.get('view') === 'contacts');
 	// V11: bare /prospects with no params = enrichments log (default landing)
 	let v11IsEnrichmentsLog = $derived(
-		version === 'v11' && !isAllCompanies && !isOnListDetail && !v11JobId && !v11IsAllContacts && !isEnrichmentFilter
+		version === 'v11' && !isAllCompanies && !isOnListDetail && !v11IsAllContacts && !isEnrichmentFilter
 	);
 	let v11EnrichSearch = $state('');
 	let v11SourceFilter = $state<string>('all');
@@ -65,88 +65,69 @@
 			class="flex w-full overflow-hidden rounded-2xl border border-grey-200 bg-white"
 			style="height: calc(100vh - 72px - 16px);"
 		>
-			<!-- Left sidebar -->
-			<div class="border-grey-200 flex w-56 shrink-0 flex-col border-r bg-white overflow-y-auto rounded-l-2xl">
-				<div class="flex items-center justify-between px-4 pt-4 pb-2">
-					<p class="text-grey-800 text-xs font-bold uppercase tracking-wider">{isAllCompanies ? 'Companies' : 'Contacts'}</p>
+			{#if v11IsEnrichmentsLog}
+				<!-- Enrichments section: full width, no sidebar -->
+				<div class="flex flex-1 flex-col overflow-hidden">
+					{@render v11EnrichmentsLog()}
+				</div>
+			{:else}
+				<!-- Contacts/Companies section: sidebar + content -->
+				<div class="border-grey-200 flex w-56 shrink-0 flex-col border-r bg-white overflow-y-auto rounded-l-2xl">
+					<div class="flex items-center justify-between px-4 pt-4 pb-2">
+						<p class="text-grey-800 text-xs font-bold uppercase tracking-wider">{isAllCompanies ? 'Companies' : 'Contacts'}</p>
+					</div>
+
+					{#if isAllCompanies}
+						<nav class="flex flex-col gap-0.5 px-3 pb-4">
+							<a href="{base}/app/prospects/companies" class="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition-colors {isAllCompanies && !isOnListDetail ? 'bg-violet-50 text-violet-700' : 'text-grey-600 hover:bg-grey-50 hover:text-grey-900'}">
+								<span class="material-icons-round text-base {isAllCompanies && !isOnListDetail ? 'text-violet-500' : 'text-grey-400'}">domain</span>
+								All Companies
+								<span class="text-grey-400 ml-auto text-xs">{v6Store.companies.length}</span>
+							</a>
+							{#each v6Store.lists.filter(l => l.type === 'company') as list}
+								<a href="{base}/app/prospects/{list.id}" class="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm transition-colors {listId === list.id ? 'bg-violet-50 text-violet-700 font-medium' : 'text-grey-600 hover:bg-grey-50 hover:text-grey-900'}">
+									<span class="material-icons-round text-base shrink-0 {listId === list.id ? 'text-violet-500' : 'text-grey-300'}">folder</span>
+									<span class="truncate flex-1">{list.name}</span>
+									<span class="text-grey-400 shrink-0 text-xs">{list.memberIds.length}</span>
+								</a>
+							{/each}
+						</nav>
+					{:else}
+						<!-- Contacts sidebar: All Contacts + Lists -->
+						<nav class="flex flex-col gap-0.5 px-3">
+							<a
+								href="{base}/app/prospects?view=contacts"
+								class="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition-colors {v11IsAllContacts && !isOnListDetail ? 'bg-violet-50 text-violet-700' : 'text-grey-600 hover:bg-grey-50 hover:text-grey-900'}"
+							>
+								<span class="material-icons-round text-base {v11IsAllContacts && !isOnListDetail ? 'text-violet-500' : 'text-grey-400'}">people</span>
+								All Contacts
+								<span class="text-grey-400 ml-auto text-xs">{v6Store.contacts.length}</span>
+							</a>
+						</nav>
+
+						<!-- Lists -->
+						<div class="flex items-center justify-between px-4 pt-4 pb-1.5">
+							<p class="text-grey-400 text-[10px] font-bold uppercase tracking-wider">Lists</p>
+							<button class="flex h-5 w-5 items-center justify-center rounded text-grey-300 transition-colors hover:bg-grey-100 hover:text-grey-500" title="New list">
+								<span class="material-icons-round text-sm">add</span>
+							</button>
+						</div>
+						<nav class="flex flex-col gap-0.5 px-3 pb-4">
+							{#each v6Store.lists.filter(l => l.type === 'people') as list}
+								<a href="{base}/app/prospects/{list.id}" class="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm transition-colors {listId === list.id ? 'bg-violet-50 text-violet-700 font-medium' : 'text-grey-600 hover:bg-grey-50 hover:text-grey-900'}">
+									<span class="material-icons-round text-base shrink-0 {listId === list.id ? 'text-violet-500' : 'text-grey-300'}">folder</span>
+									<span class="truncate flex-1">{list.name}</span>
+									<span class="text-grey-400 shrink-0 text-xs">{list.memberIds.length}</span>
+								</a>
+							{/each}
+						</nav>
+					{/if}
 				</div>
 
-				{#if isAllCompanies}
-					<nav class="flex flex-col gap-0.5 px-3 pb-4">
-						<a href="{base}/app/prospects/companies" class="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition-colors {isAllCompanies && !isOnListDetail ? 'bg-violet-50 text-violet-700' : 'text-grey-600 hover:bg-grey-50 hover:text-grey-900'}">
-							<span class="material-icons-round text-base {isAllCompanies && !isOnListDetail ? 'text-violet-500' : 'text-grey-400'}">domain</span>
-							All Companies
-							<span class="text-grey-400 ml-auto text-xs">{v6Store.companies.length}</span>
-						</a>
-						{#each v6Store.lists.filter(l => l.type === 'company') as list}
-							<a href="{base}/app/prospects/{list.id}" class="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm transition-colors {listId === list.id ? 'bg-violet-50 text-violet-700 font-medium' : 'text-grey-600 hover:bg-grey-50 hover:text-grey-900'}">
-								<span class="material-icons-round text-base shrink-0 {listId === list.id ? 'text-violet-500' : 'text-grey-300'}">folder</span>
-								<span class="truncate flex-1">{list.name}</span>
-								<span class="text-grey-400 shrink-0 text-xs">{list.memberIds.length}</span>
-							</a>
-						{/each}
-					</nav>
-				{:else}
-					<!-- V11 sidebar: Enrichments first, All Contacts second, Lists third -->
-					<nav class="flex flex-col gap-0.5 px-3">
-						<!-- Enrichments (top, default landing) -->
-						<a
-							href="{base}/app/prospects"
-							class="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition-colors {v11IsEnrichmentsLog || !!v11JobId ? 'bg-violet-50 text-violet-700' : 'text-grey-600 hover:bg-grey-50 hover:text-grey-900'}"
-						>
-							<span class="material-icons-round text-base {v11IsEnrichmentsLog || !!v11JobId ? 'text-violet-500' : 'text-grey-400'}">auto_awesome</span>
-							Enrichments
-							{#if v11RunningCount > 0}
-								<span class="ml-auto flex items-center gap-1.5">
-									<span class="relative flex h-2 w-2 shrink-0">
-										<span class="absolute inline-flex h-2 w-2 animate-ping rounded-full bg-violet-400 opacity-75"></span>
-										<span class="relative inline-flex h-2 w-2 rounded-full bg-violet-500"></span>
-									</span>
-									<span class="text-violet-600 text-[10px] font-bold">{v11RunningCount}</span>
-								</span>
-							{/if}
-						</a>
-
-						<!-- All Contacts (second) -->
-						<a
-							href="{base}/app/prospects?view=contacts"
-							class="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition-colors {v11IsAllContacts ? 'bg-violet-50 text-violet-700' : 'text-grey-600 hover:bg-grey-50 hover:text-grey-900'}"
-						>
-							<span class="material-icons-round text-base {v11IsAllContacts ? 'text-violet-500' : 'text-grey-400'}">people</span>
-							All Contacts
-							<span class="text-grey-400 ml-auto text-xs">{v6Store.contacts.length}</span>
-						</a>
-					</nav>
-
-					<!-- Lists -->
-					<div class="flex items-center justify-between px-4 pt-4 pb-1.5">
-						<p class="text-grey-400 text-[10px] font-bold uppercase tracking-wider">Lists</p>
-						<button class="flex h-5 w-5 items-center justify-center rounded text-grey-300 transition-colors hover:bg-grey-100 hover:text-grey-500" title="New list">
-							<span class="material-icons-round text-sm">add</span>
-						</button>
-					</div>
-					<nav class="flex flex-col gap-0.5 px-3 pb-4">
-						{#each v6Store.lists.filter(l => l.type === 'people') as list}
-							<a href="{base}/app/prospects/{list.id}" class="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm transition-colors {listId === list.id ? 'bg-violet-50 text-violet-700 font-medium' : 'text-grey-600 hover:bg-grey-50 hover:text-grey-900'}">
-								<span class="material-icons-round text-base shrink-0 {listId === list.id ? 'text-violet-500' : 'text-grey-300'}">folder</span>
-								<span class="truncate flex-1">{list.name}</span>
-								<span class="text-grey-400 shrink-0 text-xs">{list.memberIds.length}</span>
-							</a>
-						{/each}
-					</nav>
-				{/if}
-			</div>
-
-			<!-- Main content -->
-			<div class="flex flex-1 flex-col overflow-hidden">
-				{#if v11JobId && v11Job && !isAllCompanies}
-					{@render v11JobView()}
-				{:else if v11IsEnrichmentsLog && !isAllCompanies}
-					{@render v11EnrichmentsLog()}
-				{:else}
+				<div class="flex flex-1 flex-col overflow-hidden">
 					{@render children()}
-				{/if}
-			</div>
+				</div>
+			{/if}
 		</main>
 	</section>
 {:else if version === 'v10'}
@@ -431,6 +412,52 @@
 		</div>
 	</div>
 
+	<!-- Enrichment modes — V10-style cards -->
+	<div class="border-grey-100 border-b px-6 py-5 bg-grey-50/30">
+		<p class="text-grey-500 text-[10px] font-bold uppercase tracking-wider mb-3">New enrichment</p>
+		<div class="flex gap-3">
+			<button class="group flex flex-1 items-center gap-3 rounded-xl border-2 border-grey-200 bg-white px-4 py-4 text-left transition-all hover:border-violet-400 hover:bg-violet-50 hover:shadow-sm hover:shadow-violet-100">
+				<div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-violet-100 transition-colors group-hover:bg-violet-200">
+					<span class="material-icons-round text-violet-700 text-lg">contacts</span>
+				</div>
+				<div>
+					<p class="text-grey-900 text-sm font-semibold">Find Emails & Phones</p>
+					<p class="text-grey-400 text-xs mt-0.5">CSV, manual, or from a list</p>
+				</div>
+			</button>
+
+			<button class="group flex flex-1 items-center gap-3 rounded-xl border-2 border-grey-200 bg-white px-4 py-4 text-left transition-all hover:border-teal-400 hover:bg-teal-50 hover:shadow-sm hover:shadow-teal-100">
+				<div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-teal-100 transition-colors group-hover:bg-teal-200">
+					<span class="material-icons-round text-teal-700 text-lg">swap_horiz</span>
+				</div>
+				<div>
+					<p class="text-grey-900 text-sm font-semibold">Reverse Enrichment</p>
+					<p class="text-grey-400 text-xs mt-0.5">Email → full profile</p>
+				</div>
+			</button>
+
+			<button class="group flex flex-1 items-center gap-3 rounded-xl border-2 border-grey-200 bg-white px-4 py-4 text-left transition-all hover:border-orange-400 hover:bg-orange-50 hover:shadow-sm hover:shadow-orange-100">
+				<div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-orange-100 transition-colors group-hover:bg-orange-200">
+					<span class="material-icons-round text-orange-700 text-lg">hub</span>
+				</div>
+				<div>
+					<p class="text-grey-900 text-sm font-semibold">CRM Enrichment</p>
+					<p class="text-grey-400 text-xs mt-0.5">Enrich from HubSpot</p>
+				</div>
+			</button>
+
+			<button class="group flex flex-1 items-center gap-3 rounded-xl border-2 border-grey-200 bg-white px-4 py-4 text-left transition-all hover:border-blue-400 hover:bg-blue-50 hover:shadow-sm hover:shadow-blue-100">
+				<div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-100 transition-colors group-hover:bg-blue-200">
+					<span class="material-icons-round text-blue-700 text-lg">code</span>
+				</div>
+				<div>
+					<p class="text-grey-900 text-sm font-semibold">API & Integrations</p>
+					<p class="text-grey-400 text-xs mt-0.5">Clay, Make, Zapier, n8n</p>
+				</div>
+			</button>
+		</div>
+	</div>
+
 	<!-- Filters bar -->
 	<div class="border-grey-100 flex items-center gap-3 border-b px-6 py-3">
 		<div class="flex items-center gap-2 rounded-lg border border-grey-200 bg-grey-50 px-3 py-2 flex-1 max-w-xs">
@@ -466,11 +493,9 @@
 	</div>
 
 	<!-- Table header -->
-	<div class="grid shrink-0 grid-cols-[minmax(0,2fr)_minmax(0,3fr)_80px_80px_minmax(0,2fr)_150px_100px_100px] items-center border-b border-grey-200 bg-grey-50 px-6 py-2 text-[11px] font-semibold uppercase tracking-wider text-grey-400">
+	<div class="grid shrink-0 grid-cols-[minmax(0,2fr)_minmax(0,3fr)_minmax(0,2.5fr)_150px_100px_100px] items-center border-b border-grey-200 bg-grey-50 px-6 py-2 text-[11px] font-semibold uppercase tracking-wider text-grey-400">
 		<span>Source</span>
 		<span>Name</span>
-		<span class="text-center">Contacts</span>
-		<span class="text-center">Found</span>
 		<span>Results</span>
 		<span>Status</span>
 		<span>Date</span>
@@ -481,8 +506,8 @@
 	<div class="flex-1 overflow-auto">
 		{#each filteredRuns as run}
 			<a
-				href="{base}/app/prospects?job={run.id}"
-				class="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)_80px_80px_minmax(0,2fr)_150px_100px_100px] items-center border-b border-grey-100 px-6 py-3 transition-colors hover:bg-grey-50"
+				href="{base}/app/prospects?view=contacts&enrichment={run.id}"
+				class="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)_minmax(0,2.5fr)_150px_100px_100px] items-center border-b border-grey-100 px-6 py-3 transition-colors hover:bg-grey-50"
 			>
 				<!-- Source -->
 				<div class="flex items-center gap-2">
@@ -495,24 +520,17 @@
 				<!-- Name -->
 				<span class="text-sm text-grey-900 truncate pr-2">{run.name}</span>
 
-				<!-- Contacts -->
-				<span class="text-sm text-grey-600 text-center">{run.contactsCount}</span>
-
-				<!-- Found -->
-				<span class="text-sm text-center {run.found > 0 ? 'text-grey-900 font-medium' : 'text-grey-400'}">{run.found}/{run.contactsCount}</span>
-
-				<!-- Results breakdown -->
-				<div class="flex items-center gap-2">
-					{#if run.foundByType}
-						{#if run.foundByType.email != null}
+				<!-- Results: found rate + data type breakdown -->
+				<div class="flex items-center gap-3">
+					<span class="text-sm font-medium {run.found > 0 ? 'text-grey-900' : 'text-grey-400'}">{run.found}<span class="text-grey-400 font-normal">/{run.contactsCount}</span></span>
+					<div class="flex items-center gap-2">
+						{#if run.foundByType?.email != null}
 							<span class="inline-flex items-center gap-0.5 text-[10px] text-grey-500"><span class="material-icons-round text-pink-400 text-[11px]">email</span>{run.foundByType.email}</span>
 						{/if}
-						{#if run.foundByType.phone != null}
+						{#if run.foundByType?.phone != null}
 							<span class="inline-flex items-center gap-0.5 text-[10px] text-grey-500"><span class="material-icons-round text-violet-400 text-[11px]">phone</span>{run.foundByType.phone}</span>
 						{/if}
-					{:else}
-						<span class="inline-flex items-center gap-0.5 text-[10px] text-grey-500"><span class="material-icons-round text-pink-400 text-[11px]">email</span>{run.found}</span>
-					{/if}
+					</div>
 				</div>
 
 				<!-- Status -->

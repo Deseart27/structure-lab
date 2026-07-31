@@ -11,6 +11,13 @@
 
 	let runningJobs = $derived(v6Store.runs.filter(r => r.status === 'running'));
 	let v11RunningOpen = $state(false);
+
+	// V11: New Enrichment popover
+	let v11NewOpen = $state(false);
+	let v11ManualInput = $state('');
+	let v11QuickEmail = $state(true);
+	let v11QuickPhone = $state(true);
+	let v11QuickList = $state('none');
 </script>
 
 <div class="border-grey-200 flex h-16 w-full min-w-0 items-center justify-between gap-4 border-b bg-white px-6" style="box-shadow: 0px 1px 2px 0px rgba(57, 47, 60, 0.04);">
@@ -19,6 +26,83 @@
 			<Logo height={32} width={32} />
 		</a>
 		<Navigation />
+
+		{#if version === 'v11'}
+			<div class="relative shrink-0">
+				<button
+					class="flex h-8 items-center gap-1.5 rounded-lg bg-violet-700 px-3.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-violet-800 hover:shadow-md"
+					onclick={() => { v11NewOpen = !v11NewOpen; }}
+				>
+					<span class="material-icons-round text-base">add</span>
+					New Enrichment
+				</button>
+
+				{#if v11NewOpen}
+					<div class="fixed inset-0 z-30" onclick={() => { v11NewOpen = false; }}></div>
+					<div class="absolute right-0 top-full z-40 mt-2 w-80 rounded-xl border border-grey-200 bg-white p-4 shadow-xl">
+						<div class="mb-3">
+							<label class="text-grey-500 text-[10px] font-semibold uppercase tracking-wider mb-1.5 block">Quick enrich</label>
+							<div class="flex items-center gap-2 rounded-lg border border-grey-200 bg-grey-50 px-3 py-2">
+								<span class="material-icons-round text-grey-400 text-base">person_search</span>
+								<input
+									type="text"
+									placeholder="Paste email, LinkedIn URL, or name…"
+									class="w-full bg-transparent text-sm text-grey-900 placeholder:text-grey-400 focus:outline-none"
+									bind:value={v11ManualInput}
+								/>
+							</div>
+							<!-- Data type toggles + list -->
+							<div class="flex items-center gap-3 mt-2">
+								<label class="flex items-center gap-1.5 cursor-pointer">
+									<input type="checkbox" bind:checked={v11QuickEmail} class="accent-violet-700 h-3 w-3" />
+									<span class="material-icons-round text-xs text-pink-400">email</span>
+									<span class="text-[11px] font-medium text-grey-700">Email</span>
+								</label>
+								<label class="flex items-center gap-1.5 cursor-pointer">
+									<input type="checkbox" bind:checked={v11QuickPhone} class="accent-violet-700 h-3 w-3" />
+									<span class="material-icons-round text-xs text-violet-400">phone</span>
+									<span class="text-[11px] font-medium text-grey-700">Phone</span>
+								</label>
+								<select class="ml-auto rounded-lg border border-grey-200 bg-white px-2 py-1 text-[11px] text-grey-600 focus:outline-none focus:ring-1 focus:ring-violet-300 max-w-[110px]" bind:value={v11QuickList}>
+									<option value="none">No list</option>
+									{#each v6Store.lists.filter(l => l.type === 'people') as list}
+										<option value={list.id}>{list.name}</option>
+									{/each}
+								</select>
+							</div>
+							<button
+								class="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors {v11ManualInput.trim() && (v11QuickEmail || v11QuickPhone) ? 'bg-violet-600 text-white hover:bg-violet-700 shadow-sm' : 'bg-grey-100 text-grey-400 cursor-not-allowed'}"
+								disabled={!v11ManualInput.trim() || (!v11QuickEmail && !v11QuickPhone)}
+							>
+								<span class="material-icons-round text-sm">bolt</span>
+								Enrich{v11QuickEmail && v11QuickPhone ? '' : v11QuickEmail ? ' email' : ' phone'}
+							</button>
+						</div>
+						<div class="border-t border-grey-100 pt-3">
+							<label class="text-grey-500 text-[10px] font-semibold uppercase tracking-wider mb-2 block">Or start from</label>
+							<div class="grid grid-cols-2 gap-2">
+								<button class="flex items-center gap-2.5 rounded-lg border border-grey-200 px-3 py-2.5 text-left transition-colors hover:bg-grey-50 hover:border-violet-200">
+									<span class="material-icons-round text-grey-500 text-base">upload_file</span>
+									<div><p class="text-sm font-medium text-grey-800">CSV Upload</p><p class="text-[10px] text-grey-400">Import a file</p></div>
+								</button>
+								<button class="flex items-center gap-2.5 rounded-lg border border-grey-200 px-3 py-2.5 text-left transition-colors hover:bg-grey-50 hover:border-violet-200">
+									<span class="material-icons-round text-grey-500 text-base">search</span>
+									<div><p class="text-sm font-medium text-grey-800">Search</p><p class="text-[10px] text-grey-400">Find & enrich</p></div>
+								</button>
+								<button class="flex items-center gap-2.5 rounded-lg border border-grey-200 px-3 py-2.5 text-left transition-colors hover:bg-grey-50 hover:border-violet-200">
+									<span class="material-icons-round text-grey-500 text-base">hub</span>
+									<div><p class="text-sm font-medium text-grey-800">CRM Import</p><p class="text-[10px] text-grey-400">From HubSpot</p></div>
+								</button>
+								<button class="flex items-center gap-2.5 rounded-lg border border-grey-200 px-3 py-2.5 text-left transition-colors hover:bg-grey-50 hover:border-violet-200">
+									<span class="material-icons-round text-grey-500 text-base">code</span>
+									<div><p class="text-sm font-medium text-grey-800">API</p><p class="text-[10px] text-grey-400">Programmatic</p></div>
+								</button>
+							</div>
+						</div>
+					</div>
+				{/if}
+			</div>
+		{/if}
 	</div>
 
 	<div class="flex shrink-0 items-center gap-3 lg:gap-5">
@@ -58,7 +142,7 @@
 						<div class="flex flex-col pb-2">
 							{#each runningJobs as run}
 								<a
-									href="{base}/app/prospects?job={run.id}"
+									href="{base}/app/prospects?view=contacts&enrichment={run.id}"
 									class="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-grey-50"
 									onclick={() => { v11RunningOpen = false; }}
 								>

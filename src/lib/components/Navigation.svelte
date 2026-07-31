@@ -3,18 +3,33 @@
 	import { page } from '$app/stores';
 
 	let route = $derived($page.url.pathname);
+	let fullUrl = $derived($page.url.pathname + $page.url.search);
 	let base = $derived(`${svelteBase}/${$page.params.version}`);
 	let version = $derived($page.params.version);
 
-	type NavItem = { label: string; href: string; match: string; matchExclude?: string; badge?: string };
+
+
+	type NavItem = { label: string; href: string; match: string; matchExclude?: string; matchQuery?: string; badge?: string };
 
 	function isNavActive(item: NavItem): boolean {
 		if (item.matchExclude && route.includes(item.matchExclude)) return false;
+		if (item.matchQuery) return fullUrl.includes(item.matchQuery);
+		// For V11 Enrichments: don't highlight when on Contacts view or list detail
+		if (version === 'v11' && item.label === 'Enrichments' && (fullUrl.includes('view=contacts') || /\/prospects\/[^/]/.test(route))) return false;
+		// For V11 Lists: also active on list detail pages
+		if (version === 'v11' && item.label === 'Lists' && /\/prospects\/[^c]/.test(route)) return true;
 		return route.includes(item.match);
 	}
 
 	let navItems = $derived<NavItem[]>(
-		version === 'v10' || version === 'v11'
+		version === 'v11'
+			? [
+					{ label: 'Search', href: `${base}/app/search`, match: '/search' },
+					{ label: 'Lists', href: `${base}/app/prospects?view=contacts`, match: '/prospects', matchQuery: 'view=contacts' },
+					{ label: 'Enrichments', href: `${base}/app/prospects`, match: '/prospects', matchExclude: '/prospects/companies' },
+					{ label: 'Integrations', href: `${base}/app/integrations`, match: '/integrations' },
+				]
+		: version === 'v10'
 			? [
 					{ label: 'Search', href: `${base}/app/search`, match: '/search' },
 					{ label: 'Contacts', href: `${base}/app/prospects`, match: '/prospects', matchExclude: '/prospects/companies' },
@@ -102,7 +117,7 @@
 		</div>
 	{/each}
 
-	{#if version === 'v10' || version === 'v11'}
+	{#if version === 'v10'}
 		<a
 			href="{base}/app/enrich"
 			class="ml-1 flex h-8 shrink-0 items-center gap-1.5 rounded-lg bg-violet-700 px-3.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-violet-800 hover:shadow-md"
@@ -110,5 +125,9 @@
 			<span class="material-icons-round text-base">add</span>
 			New Enrichment
 		</a>
+	{/if}
+
+	{#if version === 'v11'}
+		<!-- placeholder: button rendered in Navbar to avoid overflow clipping -->
 	{/if}
 </div>

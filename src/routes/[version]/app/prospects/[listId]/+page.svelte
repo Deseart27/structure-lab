@@ -565,7 +565,7 @@
 	<p class="text-grey-400 text-sm">List not found.</p>
 </div>
 
-{:else if (version === 'v9' || version === 'v10' || version === 'v11') && v8List}
+{:else if (version === 'v9' || version === 'v10' || version === 'v11' || version === 'v12') && v8List}
 <!-- V9/V10/V11 List Detail -->
 {@const emailStats = (() => {
 	const stats = { valid: 0, catchAll: 0, invalid: 0, notFound: 0, pending: 0, total: v8Contacts.length };
@@ -589,12 +589,12 @@
 			<h1 class="text-grey-900 text-base font-semibold">{v8List.name}</h1>
 			{#if v8List.type === 'people'}
 				<span class="inline-flex items-center rounded-full bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-700">People</span>
-				<span class="text-grey-500 text-sm">{version === 'v11' ? v11LFilteredContacts().length : v8Contacts.length} contacts</span>
+				<span class="text-grey-500 text-sm">{(version === 'v11' || version === 'v12') ? v11LFilteredContacts().length : v8Contacts.length} contacts</span>
 			{:else}
 				<span class="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">Company</span>
 				<span class="text-grey-500 text-sm">{v8Companies.length} companies</span>
 			{/if}
-			{#if version === 'v11' && v8List.type === 'people'}
+			{#if (version === 'v11' || version === 'v12') && v8List.type === 'people'}
 				<!-- V11: filter dropdown at table level -->
 				{@const fc = v11LFilterCount()}
 				<div class="relative">
@@ -952,7 +952,7 @@
 	</div>
 </div>
 
-{:else if (version === 'v9' || version === 'v10' || version === 'v11') && !v8List}
+{:else if (version === 'v9' || version === 'v10' || version === 'v11' || version === 'v12') && !v8List}
 <div class="flex h-full items-center justify-center">
 	<p class="text-grey-400 text-sm">List not found.</p>
 </div>

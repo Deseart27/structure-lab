@@ -9,6 +9,8 @@
 
 	let version = $derived($page.params.version);
 	let basePath = $derived(`${svelteBase}/${version}`);
+	let v12Route = $derived($page.url.pathname);
+	let v12FullUrl = $derived($page.url.pathname + $page.url.search);
 
 	// V7 onboarding — shown once per session, survives component remounts via globalThis
 	const _g = globalThis as Record<string, unknown>;
@@ -162,6 +164,68 @@
 				Skip, take me to the dashboard
 			</button>
 		</div>
+	</div>
+</div>
+
+{:else if version === 'v12'}
+<div class="flex h-screen min-w-screen">
+	<!-- V12: Left sidebar navigation -->
+	<div class="flex w-[220px] shrink-0 flex-col border-r border-grey-200 bg-white">
+		<!-- Logo -->
+		<div class="flex h-16 items-center px-5">
+			<a href="{basePath}/app/search" class="flex items-center gap-2.5">
+				<img src="{svelteBase}/fullenrich-logo.svg" alt="FullEnrich" class="h-7 w-7" onerror={(e: Event) => { (e.target as HTMLElement).style.display = 'none'; }} />
+				<span class="text-grey-900 text-base font-bold tracking-tight">FullEnrich</span>
+			</a>
+		</div>
+
+		<!-- Nav items -->
+		<nav class="flex flex-col gap-0.5 px-3 mt-1">
+			<a href="{basePath}/app/search" class="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors {v12Route.includes('/search') ? 'bg-violet-50 text-violet-700' : 'text-grey-600 hover:bg-grey-50 hover:text-grey-900'}">
+				<span class="material-icons-round text-lg {v12Route.includes('/search') ? 'text-violet-500' : 'text-grey-400'}">search</span>
+				Search
+			</a>
+			<a href="{basePath}/app/prospects?view=contacts" class="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors {v12FullUrl.includes('view=contacts') || /\/prospects\/[^c]/.test(v12Route) ? 'bg-violet-50 text-violet-700' : 'text-grey-600 hover:bg-grey-50 hover:text-grey-900'}">
+				<span class="material-icons-round text-lg {v12FullUrl.includes('view=contacts') || /\/prospects\/[^c]/.test(v12Route) ? 'text-violet-500' : 'text-grey-400'}">folder</span>
+				Lists
+			</a>
+			<a href="{basePath}/app/prospects" class="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors {v12Route.includes('/prospects') && !v12FullUrl.includes('view=contacts') && !/\/prospects\/[^c]/.test(v12Route) && !v12Route.includes('/prospects/companies') ? 'bg-violet-50 text-violet-700' : 'text-grey-600 hover:bg-grey-50 hover:text-grey-900'}">
+				<span class="material-icons-round text-lg {v12Route.includes('/prospects') && !v12FullUrl.includes('view=contacts') && !/\/prospects\/[^c]/.test(v12Route) && !v12Route.includes('/prospects/companies') ? 'text-violet-500' : 'text-grey-400'}">auto_awesome</span>
+				Enrichments
+			</a>
+			<a href="{basePath}/app/integrations" class="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors {v12Route.includes('/integrations') ? 'bg-violet-50 text-violet-700' : 'text-grey-600 hover:bg-grey-50 hover:text-grey-900'}">
+				<span class="material-icons-round text-lg {v12Route.includes('/integrations') ? 'text-violet-500' : 'text-grey-400'}">extension</span>
+				Integrations
+			</a>
+		</nav>
+
+		<!-- New Enrichment button -->
+		<div class="px-3 mt-4">
+			<a href="{basePath}/app/enrich" class="flex w-full items-center justify-center gap-1.5 rounded-lg bg-violet-700 px-3 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-violet-800">
+				<span class="material-icons-round text-base">add</span>
+				New Enrichment
+			</a>
+		</div>
+
+		<!-- Spacer -->
+		<div class="flex-1"></div>
+
+		<!-- Bottom: credits + settings -->
+		<div class="flex flex-col gap-2 px-3 pb-4">
+			<button class="flex items-center gap-2.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-grey-900 transition-colors hover:bg-amber-100">
+				<span class="material-icons-round text-base text-amber-500">stars</span>
+				1,250 Credits
+			</button>
+			<button class="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-grey-600 transition-colors hover:bg-grey-50 hover:text-grey-900">
+				<span class="material-icons-round text-lg text-grey-400">settings</span>
+				Settings
+			</button>
+		</div>
+	</div>
+
+	<!-- Main content -->
+	<div class="flex flex-1 flex-col overflow-hidden">
+		{@render children()}
 	</div>
 </div>
 

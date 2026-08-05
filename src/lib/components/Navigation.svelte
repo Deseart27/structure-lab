@@ -15,14 +15,14 @@
 		if (item.matchExclude && route.includes(item.matchExclude)) return false;
 		if (item.matchQuery) return fullUrl.includes(item.matchQuery);
 		// For V11 Enrichments: don't highlight when on Contacts view or list detail
-		if (version === 'v11' && item.label === 'Enrichments' && (fullUrl.includes('view=contacts') || /\/prospects\/[^/]/.test(route))) return false;
+		if ((version === 'v11' || version === 'v12') && item.label === 'Enrichments' && (fullUrl.includes('view=contacts') || /\/prospects\/[^/]/.test(route))) return false;
 		// For V11 Lists: also active on list detail pages
-		if (version === 'v11' && item.label === 'Lists' && /\/prospects\/[^c]/.test(route)) return true;
+		if ((version === 'v11' || version === 'v12') && item.label === 'Lists' && /\/prospects\/[^c]/.test(route)) return true;
 		return route.includes(item.match);
 	}
 
 	let navItems = $derived<NavItem[]>(
-		version === 'v11'
+		version === 'v11' || version === 'v12'
 			? [
 					{ label: 'Search', href: `${base}/app/search`, match: '/search' },
 					{ label: 'Lists', href: `${base}/app/prospects?view=contacts`, match: '/prospects', matchQuery: 'view=contacts' },

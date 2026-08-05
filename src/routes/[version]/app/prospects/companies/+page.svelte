@@ -10,7 +10,7 @@
 	let allCompanies = $derived(v6Store.companies);
 </script>
 
-{#if version === 'v9' || version === 'v10' || version === 'v11'}
+{#if version === 'v9' || version === 'v10' || version === 'v11' || version === 'v12'}
 <div class="flex h-full flex-col">
 	<div class="border-grey-200 flex h-14 shrink-0 items-center justify-between border-b px-6">
 		<div class="flex items-center gap-3">

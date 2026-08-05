@@ -17,12 +17,25 @@
 	})());
 </script>
 
+{#if version === 'v12'}
+<div class="flex h-screen w-full overflow-hidden">
+	<main class="grid w-full grid-cols-[340px_1fr] grid-rows-[1fr] overflow-hidden">
+		{@render searchContent()}
+	</main>
+</div>
+{:else}
 <section class="page m-2 flex rounded-3xl">
 	<main
 		class="grid w-full grid-cols-[340px_1fr] grid-rows-[1fr] overflow-hidden rounded-2xl"
 		class:h-[calc(100vh-72px-16px)]={version !== 'v2' && version !== 'v3' && version !== 'v6' && version !== 'v7' && version !== 'v8' && version !== 'v9' && version !== 'v10' && version !== 'v11'}
 		class:h-[calc(100vh-72px-40px-16px)]={version === 'v2' || version === 'v3' || version === 'v6' || version === 'v7' || version === 'v8' || version === 'v9' || version === 'v10' || version === 'v11'}
 	>
+		{@render searchContent()}
+	</main>
+</section>
+{/if}
+
+{#snippet searchContent()}
 		<!-- Sidebar -->
 		<aside
 			class="border-grey-200 flex min-h-0 flex-col overflow-hidden rounded-l-2xl border bg-white text-sm"
@@ -61,7 +74,7 @@
 				</div>
 			{/if}
 
-			{#if currentTab !== 'lists' || version === 'v2' || version === 'v3' || version === 'v4' || version === 'v6' || version === 'v7' || version === 'v8' || version === 'v9' || version === 'v10' || version === 'v11'}
+			{#if currentTab !== 'lists' || version === 'v2' || version === 'v3' || version === 'v4' || version === 'v6' || version === 'v7' || version === 'v8' || version === 'v9' || version === 'v10' || version === 'v11' || version === 'v12'}
 				<!-- Filters sidebar -->
 				<div class="min-h-0 flex-1 overflow-auto">
 					<div class="p-4">
@@ -115,8 +128,7 @@
 		<section class="border-grey-200 min-h-0 overflow-hidden border-t border-r border-b rounded-r-2xl bg-white">
 			{@render children()}
 		</section>
-	</main>
-</section>
+{/snippet}
 
 <style>
 	.page {

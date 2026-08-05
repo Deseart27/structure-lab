@@ -71,7 +71,7 @@
 	let activeRun = $derived(activeRuns.length === 1 ? activeRuns[0] : activeRuns.length > 0 ? activeRuns[0] : enrichmentFilter ? v6Store.getRun(enrichmentFilter) : null);
 
 	// V10: collapsible right panel — V11: open by default
-	let v10PanelOpen = $state($page.params.version === 'v11');
+	let v10PanelOpen = $state($page.params.version === 'v11' || $page.params.version === 'v12');
 	let v10PrevEnrichment = $state<string | null>(null);
 	$effect(() => {
 		if (enrichmentFilter && enrichmentFilter !== v10PrevEnrichment) {
@@ -754,8 +754,8 @@
 	</div>
 </div>
 
-{:else if version === 'v11'}
-<!-- V11: All Contacts — filters as dropdown at table level -->
+{:else if version === 'v11' || version === 'v12'}
+<!-- V11/V12: All Contacts — filters as dropdown at table level -->
 {@const v11Contacts = v11FilteredContacts()}
 {@const v11Filters = v11ActiveFilterCount()}
 <div class="flex h-full flex-col">

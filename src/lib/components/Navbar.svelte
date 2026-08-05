@@ -118,7 +118,7 @@
 			</a>
 		{/if}
 
-		{#if version === 'v11' && runningJobs.length > 0}
+		{#if (version === 'v11' || version === 'v12') && runningJobs.length > 0}
 			<!-- Running jobs indicator + dropdown on hover -->
 			<div
 				class="relative"

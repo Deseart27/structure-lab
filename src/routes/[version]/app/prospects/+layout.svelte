@@ -44,7 +44,7 @@
 	let v11IsAllContacts = $derived($page.url.searchParams.get('view') === 'contacts');
 	// V11: bare /prospects with no params = enrichments log (default landing)
 	let v11IsEnrichmentsLog = $derived(
-		version === 'v11' && !isAllCompanies && !isOnListDetail && !v11IsAllContacts && !isEnrichmentFilter
+		(version === 'v11' || version === 'v12') && !isAllCompanies && !isOnListDetail && !v11IsAllContacts && !isEnrichmentFilter
 	);
 	let v11EnrichSearch = $state('');
 	let v11SourceFilter = $state<string>('all');
@@ -59,75 +59,17 @@
 	let v11RunningCount = $derived(v6Store.runs.filter(r => r.status === 'running').length);
 </script>
 
-{#if version === 'v11'}
+{#if version === 'v12'}
+	<main class="flex w-full overflow-hidden bg-white" style="height: 100vh;">
+		{@render v11v12Content()}
+	</main>
+{:else if version === 'v11'}
 	<section class="page m-2 flex rounded-3xl">
 		<main
 			class="flex w-full overflow-hidden rounded-2xl border border-grey-200 bg-white"
 			style="height: calc(100vh - 72px - 16px);"
 		>
-			{#if v11IsEnrichmentsLog}
-				<!-- Enrichments section: full width, no sidebar -->
-				<div class="flex flex-1 flex-col overflow-hidden">
-					{@render v11EnrichmentsLog()}
-				</div>
-			{:else}
-				<!-- Contacts/Companies section: sidebar + content -->
-				<div class="border-grey-200 flex w-56 shrink-0 flex-col border-r bg-white overflow-y-auto rounded-l-2xl">
-					<div class="flex items-center justify-between px-4 pt-4 pb-2">
-						<p class="text-grey-800 text-xs font-bold uppercase tracking-wider">{isAllCompanies ? 'Companies' : 'Contacts'}</p>
-					</div>
-
-					{#if isAllCompanies}
-						<nav class="flex flex-col gap-0.5 px-3 pb-4">
-							<a href="{base}/app/prospects/companies" class="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition-colors {isAllCompanies && !isOnListDetail ? 'bg-violet-50 text-violet-700' : 'text-grey-600 hover:bg-grey-50 hover:text-grey-900'}">
-								<span class="material-icons-round text-base {isAllCompanies && !isOnListDetail ? 'text-violet-500' : 'text-grey-400'}">domain</span>
-								All Companies
-								<span class="text-grey-400 ml-auto text-xs">{v6Store.companies.length}</span>
-							</a>
-							{#each v6Store.lists.filter(l => l.type === 'company') as list}
-								<a href="{base}/app/prospects/{list.id}" class="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm transition-colors {listId === list.id ? 'bg-violet-50 text-violet-700 font-medium' : 'text-grey-600 hover:bg-grey-50 hover:text-grey-900'}">
-									<span class="material-icons-round text-base shrink-0 {listId === list.id ? 'text-violet-500' : 'text-grey-300'}">folder</span>
-									<span class="truncate flex-1">{list.name}</span>
-									<span class="text-grey-400 shrink-0 text-xs">{list.memberIds.length}</span>
-								</a>
-							{/each}
-						</nav>
-					{:else}
-						<!-- Contacts sidebar: All Contacts + Lists -->
-						<nav class="flex flex-col gap-0.5 px-3">
-							<a
-								href="{base}/app/prospects?view=contacts"
-								class="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition-colors {v11IsAllContacts && !isOnListDetail ? 'bg-violet-50 text-violet-700' : 'text-grey-600 hover:bg-grey-50 hover:text-grey-900'}"
-							>
-								<span class="material-icons-round text-base {v11IsAllContacts && !isOnListDetail ? 'text-violet-500' : 'text-grey-400'}">people</span>
-								All Contacts
-								<span class="text-grey-400 ml-auto text-xs">{v6Store.contacts.length}</span>
-							</a>
-						</nav>
-
-						<!-- Lists -->
-						<div class="flex items-center justify-between px-4 pt-4 pb-1.5">
-							<p class="text-grey-400 text-[10px] font-bold uppercase tracking-wider">Lists</p>
-							<button class="flex h-5 w-5 items-center justify-center rounded text-grey-300 transition-colors hover:bg-grey-100 hover:text-grey-500" title="New list">
-								<span class="material-icons-round text-sm">add</span>
-							</button>
-						</div>
-						<nav class="flex flex-col gap-0.5 px-3 pb-4">
-							{#each v6Store.lists.filter(l => l.type === 'people') as list}
-								<a href="{base}/app/prospects/{list.id}" class="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm transition-colors {listId === list.id ? 'bg-violet-50 text-violet-700 font-medium' : 'text-grey-600 hover:bg-grey-50 hover:text-grey-900'}">
-									<span class="material-icons-round text-base shrink-0 {listId === list.id ? 'text-violet-500' : 'text-grey-300'}">folder</span>
-									<span class="truncate flex-1">{list.name}</span>
-									<span class="text-grey-400 shrink-0 text-xs">{list.memberIds.length}</span>
-								</a>
-							{/each}
-						</nav>
-					{/if}
-				</div>
-
-				<div class="flex flex-1 flex-col overflow-hidden">
-					{@render children()}
-				</div>
-			{/if}
+			{@render v11v12Content()}
 		</main>
 	</section>
 {:else if version === 'v10'}
@@ -295,11 +237,67 @@
 	<div
 		class="flex flex-col overflow-hidden"
 		class:h-[calc(100vh-64px)]={version !== 'v2' && version !== 'v3' && version !== 'v6'}
-		class:h-[calc(100vh-64px-40px)]={version === 'v2' || version === 'v3' || version === 'v6' || version === 'v7' || version === 'v8' || version === 'v9' || version === 'v10' || version === 'v11'}
+		class:h-[calc(100vh-64px-40px)]={version === 'v2' || version === 'v3' || version === 'v6' || version === 'v7' || version === 'v8' || version === 'v9' || version === 'v10' || version === 'v11' || version === 'v12'}
 	>
 		{@render children()}
 	</div>
 {/if}
+
+{#snippet v11v12Content()}
+	{#if v11IsEnrichmentsLog}
+		<div class="flex flex-1 flex-col overflow-hidden">
+			{@render v11EnrichmentsLog()}
+		</div>
+	{:else}
+		<div class="border-grey-200 flex w-56 shrink-0 flex-col border-r bg-white overflow-y-auto {version === 'v11' ? 'rounded-l-2xl' : ''}">
+			<div class="flex items-center justify-between px-4 pt-4 pb-2">
+				<p class="text-grey-800 text-xs font-bold uppercase tracking-wider">{isAllCompanies ? 'Companies' : 'Contacts'}</p>
+			</div>
+			{#if isAllCompanies}
+				<nav class="flex flex-col gap-0.5 px-3 pb-4">
+					<a href="{base}/app/prospects/companies" class="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition-colors {isAllCompanies && !isOnListDetail ? 'bg-violet-50 text-violet-700' : 'text-grey-600 hover:bg-grey-50 hover:text-grey-900'}">
+						<span class="material-icons-round text-base {isAllCompanies && !isOnListDetail ? 'text-violet-500' : 'text-grey-400'}">domain</span>
+						All Companies
+						<span class="text-grey-400 ml-auto text-xs">{v6Store.companies.length}</span>
+					</a>
+					{#each v6Store.lists.filter(l => l.type === 'company') as list}
+						<a href="{base}/app/prospects/{list.id}" class="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm transition-colors {listId === list.id ? 'bg-violet-50 text-violet-700 font-medium' : 'text-grey-600 hover:bg-grey-50 hover:text-grey-900'}">
+							<span class="material-icons-round text-base shrink-0 {listId === list.id ? 'text-violet-500' : 'text-grey-300'}">folder</span>
+							<span class="truncate flex-1">{list.name}</span>
+							<span class="text-grey-400 shrink-0 text-xs">{list.memberIds.length}</span>
+						</a>
+					{/each}
+				</nav>
+			{:else}
+				<nav class="flex flex-col gap-0.5 px-3">
+					<a href="{base}/app/prospects?view=contacts" class="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition-colors {v11IsAllContacts && !isOnListDetail ? 'bg-violet-50 text-violet-700' : 'text-grey-600 hover:bg-grey-50 hover:text-grey-900'}">
+						<span class="material-icons-round text-base {v11IsAllContacts && !isOnListDetail ? 'text-violet-500' : 'text-grey-400'}">people</span>
+						All Contacts
+						<span class="text-grey-400 ml-auto text-xs">{v6Store.contacts.length}</span>
+					</a>
+				</nav>
+				<div class="flex items-center justify-between px-4 pt-4 pb-1.5">
+					<p class="text-grey-400 text-[10px] font-bold uppercase tracking-wider">Lists</p>
+					<button class="flex h-5 w-5 items-center justify-center rounded text-grey-300 transition-colors hover:bg-grey-100 hover:text-grey-500" title="New list">
+						<span class="material-icons-round text-sm">add</span>
+					</button>
+				</div>
+				<nav class="flex flex-col gap-0.5 px-3 pb-4">
+					{#each v6Store.lists.filter(l => l.type === 'people') as list}
+						<a href="{base}/app/prospects/{list.id}" class="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm transition-colors {listId === list.id ? 'bg-violet-50 text-violet-700 font-medium' : 'text-grey-600 hover:bg-grey-50 hover:text-grey-900'}">
+							<span class="material-icons-round text-base shrink-0 {listId === list.id ? 'text-violet-500' : 'text-grey-300'}">folder</span>
+							<span class="truncate flex-1">{list.name}</span>
+							<span class="text-grey-400 shrink-0 text-xs">{list.memberIds.length}</span>
+						</a>
+					{/each}
+				</nav>
+			{/if}
+		</div>
+		<div class="flex flex-1 flex-col overflow-hidden">
+			{@render children()}
+		</div>
+	{/if}
+{/snippet}
 
 {#snippet v10EnrichmentsView()}
 <div class="flex h-full flex-col">

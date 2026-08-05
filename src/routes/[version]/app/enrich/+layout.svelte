@@ -45,7 +45,7 @@
 			</div>
 		</main>
 	</section>
-{:else if version === 'v9' || version === 'v10' || version === 'v11'}
+{:else if version === 'v9' || version === 'v10' || version === 'v11' || version === 'v12'}
 	<section class="page m-2 flex rounded-3xl">
 		<main
 			class="flex w-full overflow-hidden rounded-2xl border border-grey-200 bg-white"

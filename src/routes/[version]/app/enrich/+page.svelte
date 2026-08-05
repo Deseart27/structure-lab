@@ -985,9 +985,9 @@
 		</div>
 	</div>
 {/if}
-{:else if version === 'v8' || version === 'v9' || version === 'v10' || version === 'v11'}
+{:else if version === 'v8' || version === 'v9' || version === 'v10' || version === 'v11' || version === 'v12'}
 <!-- V8/V9 Enrichment -->
-{#if version === 'v9' || version === 'v10' || version === 'v11'}
+{#if version === 'v9' || version === 'v10' || version === 'v11' || version === 'v12'}
 <!-- V9: Card-nav enrichment with bottom history -->
 <div class="flex h-full w-full flex-col overflow-hidden">
 	<div class="flex-1 overflow-auto">
@@ -1458,8 +1458,8 @@
 								<label class="flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 transition-colors hover:bg-white {v8TargetList === '' ? 'bg-white border border-violet-200 shadow-sm' : ''}">
 									<input type="radio" name="v8-target" value="" bind:group={v8TargetList} class="accent-violet-700" />
 									<div>
-										<span class="text-grey-900 text-sm font-medium">{version === 'v9' || version === 'v10' || version === 'v11' ? 'No list' : 'Auto-create a new list'}</span>
-										<span class="text-grey-400 text-xs ml-1">{version === 'v9' || version === 'v10' || version === 'v11' ? 'contacts added to All Contacts' : 'named from your input'}</span>
+										<span class="text-grey-900 text-sm font-medium">{version === 'v9' || version === 'v10' || version === 'v11' || version === 'v12' ? 'No list' : 'Auto-create a new list'}</span>
+										<span class="text-grey-400 text-xs ml-1">{version === 'v9' || version === 'v10' || version === 'v11' || version === 'v12' ? 'contacts added to All Contacts' : 'named from your input'}</span>
 									</div>
 									{#if version !== 'v9' && version !== 'v10' && version !== 'v11'}
 										<span class="ml-auto inline-flex items-center rounded-full border border-dashed border-grey-300 px-1.5 py-0.5 text-[10px] text-grey-400">auto</span>

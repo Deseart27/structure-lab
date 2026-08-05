@@ -2,6 +2,7 @@
 	import { base } from '$app/paths';
 
 	const versions = [
+		{ id: 'v12', name: 'Version 12', desc: 'V12 — Sidebar navigation instead of top navbar.', entry: 'search' },
 		{ id: 'v11', name: 'Version 11', desc: 'V11 — iterating on top of V10.', entry: 'search' },
 		{ id: 'v10', name: 'Version 10', desc: 'V10 — iterating on top of V9 production model.', entry: 'search' },
 		{ id: 'v9', name: 'Version 9 — Production', desc: 'Forced lists + enrichment jobs as view layer. Cross-linked: enrichment shows "In list", lists show "Last enriched". Production-quality UI.', entry: 'search' },
